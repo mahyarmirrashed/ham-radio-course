@@ -9,6 +9,7 @@ from pathlib import Path
 import zipfile
 import shutil
 import pandas as pd
+import json
 
 app = typer.Typer()
 
@@ -71,13 +72,14 @@ def process_question_bank(level: str):
     df = pd.read_csv(txt_path, sep=";", encoding="ISO-8859-1")
     df.columns = df.columns.str.strip()
 
-    def get_category(qid):
-        for key, val in CATEGORIES.items():
-            if str(qid).startswith(key):
-                return val
-        return ""
+    # Extract prefix (e.g. B-001) from ID (e.g. B-001-001-001)
+    def get_prefix(qid):
+        parts = str(qid).split("-")
+        if len(parts) >= 2:
+            return f"{parts[0]}-{parts[1]}"
+        return "Unknown"
 
-    df["category"] = df["question_id"].apply(get_category)
+    df["category_code"] = df["question_id"].apply(get_prefix)
 
     df_final = df[
         [
@@ -87,7 +89,7 @@ def process_question_bank(level: str):
             "incorrect_answer_1_english",
             "incorrect_answer_2_english",
             "incorrect_answer_3_english",
-            "category",
+            "category_code",
         ]
     ].copy()
 
@@ -103,8 +105,16 @@ def process_question_bank(level: str):
         inplace=True,
     )
 
+    output_data = {}
+    for code, group in df_final.groupby("category_code"):
+        title = CATEGORIES.get(code, "Unknown Category")
+        questions = group.drop(columns=["category_code"]).to_dict(orient="records")
+        output_data[code] = {"title": title, "questions": questions}
+
     output_json = DATA_DIR / f"amateur_{level}_question.json"
-    df_final.to_json(output_json, orient="records", indent=2, force_ascii=False)
+
+    with open(output_json, "w", encoding="utf-8") as f:
+        json.dump(output_data, f, indent=2, ensure_ascii=False)
 
     typer.echo(" done!")
 
@@ -113,7 +123,6 @@ def process_question_bank(level: str):
 def update():
     """
     Update question banks (basic, advanced).
-    Downloads fresh data, processes English categories, and saves as JSON in data/.
     """
     if DOWNLOAD_DIR.exists():
         shutil.rmtree(DOWNLOAD_DIR)
