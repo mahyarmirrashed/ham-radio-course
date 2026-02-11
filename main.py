@@ -121,9 +121,7 @@ def process_question_bank(level: str):
 
 @app.command()
 def update():
-    """
-    Update question banks (basic, advanced).
-    """
+    """Update question banks (basic, advanced)."""
     if DOWNLOAD_DIR.exists():
         shutil.rmtree(DOWNLOAD_DIR)
     DOWNLOAD_DIR.mkdir()
@@ -137,8 +135,11 @@ def update():
 
 
 @app.command()
-def test():
-    typer.echo("Welcome to the test...")
+def quiz():
+    """Run interactive quiz."""
+    from quiz import Quiz
+
+    Quiz().run()
 
 
 if __name__ == "__main__":
