@@ -19,8 +19,9 @@
 
         pythonEnv = pkgs.python312.withPackages (
           ps: with ps; [
-            typer
+            pandas
             requests
+            typer
           ]
         );
       in
