@@ -35,7 +35,7 @@ def download_and_extract(level: str, output_dir: Path, force: bool):
         typer.confirm(f"{zip_path} already exists. Overwrite?", abort=True)
 
     # Download
-    typer.echo(f"Downloading {level} question bank...")
+    typer.echo(f"Downloading {level.upper()} question bank...", nl=False)
     response = requests.get(zip_url, stream=True)
     response.raise_for_status()
 
@@ -43,17 +43,14 @@ def download_and_extract(level: str, output_dir: Path, force: bool):
         for chunk in response.iter_content(chunk_size=8192):
             f.write(chunk)
 
-    typer.echo(f"Saved: {zip_path}")
+    typer.echo(" done!")
 
     # Extract
-    typer.echo("Extracting...")
+    typer.echo("Extracting...", nl=False)
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
         zip_ref.extractall(extract_dir)
 
-    typer.echo(f"Extracted to: {extract_dir}")
-    typer.echo("Contents:")
-    for path in sorted(extract_dir.rglob("*")):
-        typer.echo(f"  {path.relative_to(extract_dir)}")
+    typer.echo(" done!")
 
 
 @app.command()
