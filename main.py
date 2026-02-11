@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-Typer CLI for Canadian Amateur Radio Question Banks
-Downloads and extracts official ZIP files from ISED.
+CLI for Canadian Amateur Radio Question Banks for testing yourself.
 """
 
 import typer
