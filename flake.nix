@@ -16,13 +16,19 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
+
+        pythonEnv = pkgs.python312.withPackages (
+          ps: with ps; [
+            beautifulsoup4
+            requests
+          ]
+        );
       in
       {
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
-            just
-            nodejs-slim_22
             pnpm
+            pythonEnv
           ];
           shellHook = ''
             export PATH="$PATH:$(pnpm bin)"
