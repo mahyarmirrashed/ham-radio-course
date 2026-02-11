@@ -21,6 +21,7 @@
           ps: with ps; [
             pandas
             requests
+            rich
             typer
           ]
         );
