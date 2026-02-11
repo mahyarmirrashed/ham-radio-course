@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+"""
+Standalone CLI for testing from question bank.
+"""
+
 import json
 import random
 import sys
@@ -7,240 +12,239 @@ from pathlib import Path
 from time import sleep
 
 from rich.console import Console
-from rich.layout import Layout
 from rich.panel import Panel
-from rich.live import Live
 from rich.table import Table
-from rich.text import Text
-from rich.align import Align
 from rich import box
 
 DATA_DIR = Path("data")
 
 
-class Quiz:
+class QuizApp:
     def __init__(self):
         self.console = Console()
-        self.questions = []
-        self.current_q_index = 0
-        self.score = 0
         self.categories = {}
-        self.state = "MENU"  # MENU, QUIZ, RESULT
-        self.selected_category = None
-        self.last_feedback = ""
+        self.questions = []
+        self.current_index = 0
+        self.score = 0
+        self.current_choices = []
 
-    def load_data(self):
+    def load_questions(self):
+        """Load all question files from data directory"""
         files = list(DATA_DIR.glob("*.json"))
         if not files:
+            self.console.print("[red]No data files found in 'data' directory![/]")
             return False
 
-        for f in files:
-            with open(f, "r", encoding="utf-8") as file:
-                data = json.load(file)
+        for file_path in files:
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
                 for code, content in data.items():
                     title = content["title"]
-                    qs = content["questions"]
+                    questions = content["questions"]
+
                     if title not in self.categories:
                         self.categories[title] = []
-                    self.categories[title].extend(qs)
+                    self.categories[title].extend(questions)
+
         return True
 
     def get_key(self):
-        """Simple cross-platform key reader (Unix version)."""
+        """Get single keypress from user"""
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
         try:
-            tty.setraw(sys.stdin.fileno())
-            ch = sys.stdin.read(1)
+            tty.setraw(fd)
+            key = sys.stdin.read(1)
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        return ch
+        return key
 
-    def make_layout(self):
-        layout = Layout(name="root")
-        layout.split(
-            Layout(name="header", size=3),
-            Layout(name="body", ratio=1),
-            Layout(name="footer", size=3),
+    def show_menu(self):
+        """Display category selection menu"""
+        self.console.clear()
+
+        # Title
+        self.console.print(
+            Panel(
+                "[bold gold1]Canadian Amateur Radio Quiz[/]",
+                box=box.DOUBLE,
+                style="blue",
+            )
         )
-        return layout
+        self.console.print()
 
-    def render_header(self):
-        title = "Canadian Amateur Radio Quiz"
-        if self.state == "QUIZ":
-            title += f" | Category: {self.selected_category}"
-        return Panel(
-            Align.center(f"[bold gold1]{title}[/]", vertical="middle"),
-            style="white on blue",
-        )
-
-    def render_footer(self):
-        if self.state == "MENU":
-            text = "Press [bold]Category Number[/] to start | [bold]q[/] to quit"
-        elif self.state == "QUIZ":
-            text = "Press [bold]1-4[/] to answer | [bold]q[/] to quit menu"
-        else:
-            text = "Press [bold]q[/] to quit"
-        return Panel(Align.center(text, vertical="middle"), style="white on blue")
-
-    def render_menu(self):
-        table = Table(box=box.ROUNDED, show_header=True, header_style="bold magenta")
-        table.add_column("#", style="cyan", width=4)
+        # Category table
+        table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan")
+        table.add_column("#", justify="right", style="cyan")
         table.add_column("Category", style="green")
-        table.add_column("Questions", justify="right")
+        table.add_column("Questions", justify="right", style="yellow")
 
-        cats = sorted(self.categories.items())
-        # "All" option
-        table.add_row("0", "All Categories", str(sum(len(v) for v in cats)))
+        # Add "All Categories" option
+        total_qs = sum(len(qs) for qs in self.categories.values())
+        table.add_row("0", "All Categories", str(total_qs))
 
-        for idx, (name, qs) in enumerate(cats, 1):
-            table.add_row(str(idx), name, str(len(qs)))
+        # Add individual categories
+        sorted_cats = sorted(self.categories.items())
+        for idx, (cat_name, qs) in enumerate(sorted_cats, 1):
+            table.add_row(str(idx), cat_name, str(len(qs)))
 
-        return Panel(
-            Align.center(table, vertical="middle"),
-            title="Main Menu",
-            border_style="green",
+        self.console.print(table)
+        self.console.print()
+        self.console.print("[cyan]Press category number to start, or 'q' to quit[/]")
+
+        return sorted_cats
+
+    def select_category(self, sorted_cats):
+        """Handle category selection"""
+        while True:
+            key = self.get_key()
+
+            if key == "q":
+                return None
+
+            if key.isdigit():
+                idx = int(key)
+
+                # All categories
+                if idx == 0:
+                    self.questions = []
+                    for qs in self.categories.values():
+                        self.questions.extend(qs)
+                    return "All Categories"
+
+                # Specific category
+                elif 1 <= idx <= len(sorted_cats):
+                    cat_name = sorted_cats[idx - 1][0]
+                    self.questions = self.categories[cat_name].copy()
+                    return cat_name
+
+    def prepare_quiz(self):
+        """Shuffle and limit questions"""
+        random.shuffle(self.questions)
+        self.questions = self.questions[:20]
+        self.current_index = 0
+        self.score = 0
+
+    def show_question(self):
+        """Display current question"""
+        self.console.clear()
+
+        q = self.questions[self.current_index]
+
+        # Header
+        self.console.print(
+            Panel(
+                f"[bold]Question {self.current_index + 1} of {len(self.questions)}[/]",
+                style="blue",
+            )
         )
+        self.console.print()
 
-    def render_quiz(self):
-        q = self.questions[self.current_q_index]
-
-        # Question Panel
-        q_text = f"[bold white]{q['question']}[/]"
-        q_panel = Panel(
-            Align.center(q_text, vertical="middle"),
-            title=f"Question {self.current_q_index + 1}/{len(self.questions)}",
-            border_style="blue",
-            padding=(1, 2),
+        # Question text
+        self.console.print(
+            Panel(
+                f"[bold white]{q['question']}[/]",
+                box=box.ROUNDED,
+                border_style="cyan",
+                padding=(1, 2),
+            )
         )
+        self.console.print()
 
-        # Choices Table
-        grid = Table.grid(expand=True, padding=(1, 2))
-        grid.add_column(justify="center", ratio=1)
-        grid.add_column(justify="center", ratio=1)
-
-        # Randomize choices if not already done (we do it in loop logic usually, but here simple)
-        # For display, we just assume they are shuffled in self.current_choices
-
-        c = self.current_choices
-        grid.add_row(
-            Panel(f"[bold]1.[/] {c[0]}", border_style="white"),
-            Panel(f"[bold]2.[/] {c[1]}", border_style="white"),
-        )
-        grid.add_row(
-            Panel(f"[bold]3.[/] {c[2]}", border_style="white"),
-            Panel(f"[bold]4.[/] {c[3]}", border_style="white"),
-        )
-
-        # Body Layout
-        body = Layout()
-        body.split(
-            Layout(q_panel, ratio=1),
-            Layout(Align.center(self.last_feedback, vertical="middle"), size=3),
-            Layout(grid, ratio=2),
-        )
-        return body
-
-    def render_result(self):
-        score_pct = (self.score / len(self.questions)) * 100
-        panel = Panel(
-            Align.center(
-                f"[bold]Quiz Complete![/]\n\n"
-                f"Score: [bold green]{self.score}[/] / {len(self.questions)}\n"
-                f"Percentage: [bold yellow]{score_pct:.1f}%[/]",
-                vertical="middle",
-            ),
-            title="Results",
-            border_style="gold1",
-        )
-        return panel
-
-    def run(self):
-        if not self.load_data():
-            print("No data found! Run 'update' first.")
-            return
-
-        # Prepare Menu Options
-        menu_options = ["All Categories"] + sorted(self.categories.keys())
-
-        with Live(self.make_layout(), screen=True, refresh_per_second=10) as live:
-            while True:
-                layout = self.make_layout()
-                layout["header"].update(self.render_header())
-                layout["footer"].update(self.render_footer())
-
-                if self.state == "MENU":
-                    layout["body"].update(self.render_menu())
-                    live.update(layout)
-
-                    key = self.get_key()
-                    if key == "q":
-                        break
-
-                    if key.isdigit():
-                        idx = int(key)
-                        if 0 <= idx < len(menu_options):
-                            self.selected_category = menu_options[idx]
-
-                            # Load Questions
-                            if idx == 0:  # All
-                                self.questions = []
-                                for qs in self.categories.values():
-                                    self.questions.extend(qs)
-                            else:
-                                self.questions = self.categories[self.selected_category]
-
-                            random.shuffle(self.questions)
-                            self.questions = self.questions[:20]  # Limit to 20
-                            self.current_q_index = 0
-                            self.score = 0
-                            self.state = "QUIZ"
-
-                            # Prep first question
-                            self.prepare_question()
-
-                elif self.state == "QUIZ":
-                    layout["body"].update(self.render_quiz())
-                    live.update(layout)
-
-                    key = self.get_key()
-                    if key == "q":
-                        self.state = "MENU"
-                        continue
-
-                    if key in ["1", "2", "3", "4"]:
-                        idx = int(key) - 1
-                        selected_ans = self.current_choices[idx]
-                        correct_ans = self.questions[self.current_q_index]["answer"]
-
-                        if selected_ans == correct_ans:
-                            self.score += 1
-                            self.last_feedback = "[bold green]Correct![/]"
-                        else:
-                            self.last_feedback = (
-                                f"[bold red]Wrong! Answer was: {correct_ans}[/]"
-                            )
-
-                        # Show feedback briefly
-                        layout["body"].update(self.render_quiz())
-                        live.update(layout)
-                        sleep(1.5)
-                        self.last_feedback = ""
-
-                        self.current_q_index += 1
-                        if self.current_q_index >= len(self.questions):
-                            self.state = "RESULT"
-                        else:
-                            self.prepare_question()
-
-                elif self.state == "RESULT":
-                    layout["body"].update(self.render_result())
-                    live.update(layout)
-                    if self.get_key() == "q":
-                        self.state = "MENU"
-
-    def prepare_question(self):
-        q = self.questions[self.current_q_index]
+        # Prepare shuffled choices
         choices = [q["answer"], q["distractor_1"], q["distractor_2"], q["distractor_3"]]
         random.shuffle(choices)
         self.current_choices = choices
+
+        # Display choices
+        for i, choice in enumerate(choices, 1):
+            self.console.print(f"  [bold cyan]{i}.[/] {choice}")
+
+        self.console.print()
+        self.console.print("[dim]Press 1-4 to answer, 'q' to quit[/]")
+
+    def check_answer(self, choice_num):
+        """Check if answer is correct and show feedback"""
+        q = self.questions[self.current_index]
+        selected = self.current_choices[choice_num - 1]
+        correct = q["answer"]
+
+        self.console.print()
+
+        if selected == correct:
+            self.score += 1
+            self.console.print(Panel("[bold green]✓ Correct![/]", border_style="green"))
+        else:
+            self.console.print(
+                Panel(
+                    f"[bold red]✗ Wrong![/]\n\nCorrect answer: [yellow]{correct}[/]",
+                    border_style="red",
+                )
+            )
+
+        sleep(2)
+
+    def show_results(self):
+        """Display final score"""
+        self.console.clear()
+
+        percentage = (self.score / len(self.questions)) * 100
+
+        self.console.print(
+            Panel(
+                f"[bold gold1]Quiz Complete![/]\n\n"
+                f"Score: [bold green]{self.score}[/] / {len(self.questions)}\n"
+                f"Percentage: [bold yellow]{percentage:.1f}%[/]",
+                box=box.DOUBLE,
+                border_style="gold1",
+                padding=(2, 4),
+            )
+        )
+        self.console.print()
+        self.console.print("[cyan]Press any key to return to menu[/]")
+
+        self.get_key()
+
+    def run_quiz(self, category_name):
+        """Main quiz loop"""
+        self.prepare_quiz()
+
+        while self.current_index < len(self.questions):
+            self.show_question()
+
+            while True:
+                key = self.get_key()
+
+                if key == "q":
+                    return False
+
+                if key in ["1", "2", "3", "4"]:
+                    self.check_answer(int(key))
+                    self.current_index += 1
+                    break
+
+        self.show_results()
+        return True
+
+    def run(self):
+        """Main application loop"""
+        if not self.load_questions():
+            return
+
+        while True:
+            sorted_cats = self.show_menu()
+            category = self.select_category(sorted_cats)
+
+            if category is None:
+                break
+
+            if not self.run_quiz(category):
+                continue
+
+        self.console.clear()
+        self.console.print("[green]Thanks for using the quiz app![/]")
+
+
+if __name__ == "__main__":
+    app = QuizApp()
+    app.run()
