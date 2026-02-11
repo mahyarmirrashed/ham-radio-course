@@ -12,8 +12,8 @@ from typing import Annotated
 # Main app
 app = typer.Typer()
 
-# Nested update app (subcommands)
-update_app = typer.Typer(no_args_is_help=True)
+# Update app
+update_app = typer.Typer(no_args_is_help=False)
 app.add_typer(update_app, name="update")
 
 # Official ZIP URLs
