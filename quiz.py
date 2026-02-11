@@ -1,8 +1,3 @@
-#!/usr/bin/env python3
-"""
-Standalone CLI for testing from question bank.
-"""
-
 import json
 import random
 import sys
@@ -16,11 +11,15 @@ from rich.panel import Panel
 from rich.table import Table
 from rich import box
 
-DATA_DIR = Path("data")
 
+class Quiz:
+    def __init__(self, filepath):
+        """
+        Initialize Quiz with questions from a JSON file.
 
-class QuizApp:
-    def __init__(self):
+        Args:
+            filepath: Path to JSON file containing questions
+        """
         self.console = Console()
         self.categories = {}
         self.questions = []
@@ -28,25 +27,21 @@ class QuizApp:
         self.score = 0
         self.current_choices = []
 
-    def load_questions(self):
-        """Load all question files from data directory"""
-        files = list(DATA_DIR.glob("*.json"))
-        if not files:
-            self.console.print("[red]No data files found in 'data' directory![/]")
-            return False
+        # Load and organize questions from JSON file
+        self._load(filepath)
 
-        for file_path in files:
-            with open(file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                for code, content in data.items():
-                    title = content["title"]
-                    questions = content["questions"]
+    def _load(self, filepath):
+        """Load questions from JSON file and organize by category"""
+        with open(filepath, "r", encoding="utf-8") as f:
+            data = json.load(f)
 
-                    if title not in self.categories:
-                        self.categories[title] = []
-                    self.categories[title].extend(questions)
+        for code, content in data.items():
+            title = content["title"]
+            questions = content["questions"]
 
-        return True
+            if title not in self.categories:
+                self.categories[title] = []
+            self.categories[title].extend(questions)
 
     def get_key(self):
         """Get single keypress from user"""
@@ -228,9 +223,6 @@ class QuizApp:
 
     def run(self):
         """Main application loop"""
-        if not self.load_questions():
-            return
-
         while True:
             sorted_cats = self.show_menu()
             category = self.select_category(sorted_cats)
@@ -243,8 +235,3 @@ class QuizApp:
 
         self.console.clear()
         self.console.print("[green]Thanks for using the quiz app![/]")
-
-
-if __name__ == "__main__":
-    app = QuizApp()
-    app.run()

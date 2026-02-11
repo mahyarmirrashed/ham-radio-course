@@ -137,9 +137,30 @@ def update():
 @app.command()
 def quiz():
     """Run interactive quiz."""
+    from pathlib import Path
     from quiz import Quiz
+    import typer
 
-    Quiz().run()
+    data_dir = Path("data")
+    json_files = list(data_dir.glob("*.json"))
+
+    if not json_files:
+        typer.echo("No JSON files found in data directory!")
+        raise typer.Exit(1)
+
+    typer.echo("Available question sets:")
+    for idx, file in enumerate(json_files, 1):
+        typer.echo(f"  {idx}. {file.name}")
+
+    choice = typer.prompt("Select a file (number)", type=int)
+
+    if 1 <= choice <= len(json_files):
+        selected_file = json_files[choice - 1]
+        quiz = Quiz(selected_file)
+        quiz.run()
+    else:
+        typer.echo("Invalid selection!")
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":
