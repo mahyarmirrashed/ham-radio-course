@@ -9,12 +9,7 @@ from pathlib import Path
 import zipfile
 from typing import Annotated
 
-# Main app
 app = typer.Typer()
-
-# Update app
-update_app = typer.Typer(no_args_is_help=False)
-app.add_typer(update_app, name="update")
 
 # Official ZIP URLs
 ZIP_URLS = {
@@ -61,38 +56,15 @@ def download_and_extract(level: str, output_dir: Path, force: bool):
         typer.echo(f"  {path.relative_to(extract_dir)}")
 
 
-@update_app.callback(invoke_without_command=True)
-def update_callback(
+@app.command()
+def update(
     force: Annotated[bool, typer.Option("-f", "--force")] = False,
     output: Annotated[Path, typer.Option("-o", "--output")] = DATA_DIR,
 ):
     """
     Update question banks (basic, advanced).
-
-    Run without subcommand to update ALL.
     """
-    if typer.context.invoke_without_command:
-        # Default: update all
-        download_and_extract("basic", output, force)
-        download_and_extract("advanced", output, force)
-    # else: subcommands handle themselves
-
-
-@update_app.command("basic")
-def update_basic(
-    force: Annotated[bool, typer.Option("-f", "--force")] = False,
-    output: Annotated[Path, typer.Option("-o", "--output")] = DATA_DIR,
-):
-    """Update basic question bank."""
     download_and_extract("basic", output, force)
-
-
-@update_app.command("advanced")
-def update_advanced(
-    force: Annotated[bool, typer.Option("-f", "--force")] = False,
-    output: Annotated[Path, typer.Option("-o", "--output")] = DATA_DIR,
-):
-    """Update advanced question bank."""
     download_and_extract("advanced", output, force)
 
 
