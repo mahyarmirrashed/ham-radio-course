@@ -1,7 +1,0 @@
-data/*
-!data/basic/
-data/basic/*
-!data/basic/amat_basic_quest_delim.txt
-!data/advanced/
-data/advanced/*
-!data/advanced/amat_adv_quest_delim.txt
