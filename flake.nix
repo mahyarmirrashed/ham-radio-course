@@ -19,7 +19,7 @@
 
         pythonEnv = pkgs.python312.withPackages (
           ps: with ps; [
-            beautifulsoup4
+            typer
             requests
           ]
         );
