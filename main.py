@@ -10,8 +10,14 @@ import zipfile
 import shutil
 import pandas as pd
 import json
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from rich import box
+from rich.progress import Progress, SpinnerColumn, TextColumn
 
 app = typer.Typer()
+console = Console()
 
 ZIP_URLS = {
     "basic": "https://apc-cap.ic.gc.ca/datafiles/amat_basic_quest.zip",
@@ -46,28 +52,28 @@ def process_question_bank(level: str):
     level_dir.mkdir(parents=True, exist_ok=True)
     zip_path = level_dir / f"{level}_questions.zip"
 
-    typer.echo(f"Downloading {level.upper()} question bank...", nl=False)
+    console.print(f"[cyan]Downloading {level.upper()} question bank...[/]", end="")
     response = requests.get(zip_url, stream=True)
     response.raise_for_status()
 
     with open(zip_path, "wb") as f:
         for chunk in response.iter_content(chunk_size=8192):
             f.write(chunk)
-    typer.echo(" done!")
+    console.print(" [green]✓[/]")
 
-    typer.echo(f"Extracting {level.upper()}...", nl=False)
+    console.print(f"[cyan]Extracting {level.upper()}...[/]", end="")
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
         zip_ref.extractall(level_dir)
-    typer.echo(" done!")
+    console.print(" [green]✓[/]")
 
     txt_files = list(level_dir.glob("*_delim.txt"))
     if not txt_files:
-        typer.echo(f"Error: Could not find delimited text file for {level}", err=True)
+        console.print(f"[red]Error: Could not find delimited text file for {level}[/]")
         raise typer.Exit(code=1)
 
     txt_path = txt_files[0]
 
-    typer.echo(f"Processing {level.upper()} data to JSON...", nl=False)
+    console.print(f"[cyan]Processing {level.upper()} data to JSON...[/]", end="")
 
     df = pd.read_csv(txt_path, sep=";", encoding="ISO-8859-1")
     df.columns = df.columns.str.strip()
@@ -116,12 +122,21 @@ def process_question_bank(level: str):
     with open(output_json, "w", encoding="utf-8") as f:
         json.dump(output_data, f, indent=2, ensure_ascii=False)
 
-    typer.echo(" done!")
+    console.print(" [green]✓[/]")
 
 
 @app.command()
 def update():
     """Update question banks (basic, advanced)."""
+    console.print(
+        Panel(
+            "[bold gold1]Canadian Amateur Radio Question Bank Updater[/]",
+            box=box.DOUBLE,
+            style="blue",
+        )
+    )
+    console.print()
+
     if DOWNLOAD_DIR.exists():
         shutil.rmtree(DOWNLOAD_DIR)
     DOWNLOAD_DIR.mkdir()
@@ -133,17 +148,43 @@ def update():
     if DOWNLOAD_DIR.exists():
         shutil.rmtree(DOWNLOAD_DIR)
 
+    console.print()
+    console.print(
+        Panel(
+            "[bold green]✓ Question banks updated successfully![/]",
+            border_style="green",
+        )
+    )
+
 
 @app.command()
 def quiz():
     """Run interactive quiz."""
     from quiz import Quiz
 
-    typer.echo("Select question level:")
-    typer.echo("  1. Basic")
-    typer.echo("  2. Advanced")
+    console.clear()
 
-    choice = typer.prompt("Enter your choice (1 or 2)", type=int)
+    # Title
+    console.print(
+        Panel(
+            "[bold gold1]Canadian Amateur Radio Quiz[/]", box=box.DOUBLE, style="blue"
+        )
+    )
+    console.print()
+
+    # Level selection table
+    table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan")
+    table.add_column("#", justify="right", style="cyan")
+    table.add_column("Level", style="green")
+
+    table.add_row("1", "Basic")
+    table.add_row("2", "Advanced")
+
+    console.print(table)
+    console.print()
+    console.print("[cyan]Select question level (1 or 2):[/] ", end="")
+
+    choice = typer.prompt("", type=int)
 
     # Map choice to file
     files = {
@@ -152,13 +193,16 @@ def quiz():
     }
 
     if choice not in files:
-        typer.echo("Invalid choice! Please select 1 or 2.")
+        console.print("[red]Invalid choice! Please select 1 or 2.[/]")
         raise typer.Exit(1)
 
     filepath = files[choice]
 
     if not filepath.exists():
-        typer.echo(f"File not found: {filepath}")
+        console.print(f"[red]File not found: {filepath}[/]")
+        console.print(
+            "[yellow]Run 'update' command first to download question banks.[/]"
+        )
         raise typer.Exit(1)
 
     quiz = Quiz(filepath)
