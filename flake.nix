@@ -28,13 +28,9 @@
       in
       {
         devShells.default = pkgs.mkShell {
-          packages = with pkgs; [
-            pnpm
+          packages = [
             pythonEnv
           ];
-          shellHook = ''
-            export PATH="$PATH:$(pnpm bin)"
-          '';
         };
       }
     );
