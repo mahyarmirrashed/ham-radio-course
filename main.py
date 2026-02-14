@@ -3,18 +3,19 @@
 CLI for Canadian Amateur Radio Question Banks for testing yourself.
 """
 
-import typer
-import requests
-from pathlib import Path
-import zipfile
-import shutil
-import pandas as pd
 import json
+import shutil
+import zipfile
+from pathlib import Path
+
+import pandas as pd
+import requests
+import typer
+from rich import box
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
-from rich import box
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.table import Table
 
 app = typer.Typer()
 console = Console()

@@ -1,15 +1,15 @@
 import json
 import random
 import sys
-import tty
 import termios
+import tty
 from pathlib import Path
 from time import sleep
 
+from rich import box
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from rich import box
 
 
 class Quiz:
