@@ -1,4 +1,4 @@
-# HAM Radio Course
+# HAM Radio Course Practice Test (CLI)
 
 A simple terminal-based quiz app for studying Canadian Amateur Radio exam questions.
 
