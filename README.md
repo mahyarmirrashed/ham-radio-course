@@ -27,7 +27,7 @@ You'll be prompted to select Basic (1) or Advanced (2) level, then you can:
 - Choose from different question categories or practice all questions
 - Answer 20 random questions per session
 - Get immediate feedback on your answers
-- See your final score
+- See your final score (and review incorrect questions)
 
 ## Controls
 
