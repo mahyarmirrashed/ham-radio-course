@@ -138,7 +138,7 @@ class Quiz:
         # Question text
         self.console.print(
             Panel(
-                f"[bold white]{q['question']}[/]",
+                f"[bold white]{q['id']}: {q['question']}[/]",
                 box=box.ROUNDED,
                 border_style="cyan",
                 padding=(1, 2),
