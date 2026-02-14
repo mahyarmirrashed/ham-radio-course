@@ -23,6 +23,7 @@ class Quiz:
         self.console = Console()
         self.categories = {}
         self.questions = []
+        self.questions_answered_incorrectly = []
         self.current_index = 0
         self.score = 0
         self.current_choices = []
@@ -119,6 +120,7 @@ class Quiz:
         self.questions = self.questions[:20]
         self.current_index = 0
         self.score = 0
+        self.questions_answered_incorrectly = []
 
     def show_question(self):
         """Display current question"""
@@ -170,6 +172,10 @@ class Quiz:
             self.score += 1
             self.console.print(Panel("[bold green]✓ Correct![/]", border_style="green"))
         else:
+            # Track incorrect answer
+            self.questions_answered_incorrectly.append(
+                {"question": q, "your_answer": selected, "correct_answer": correct}
+            )
             self.console.print(
                 Panel(
                     f"[bold red]✗ Wrong![/]\n\nCorrect answer: [yellow]{correct}[/]",
@@ -178,6 +184,45 @@ class Quiz:
             )
 
         sleep(2)
+
+    def show_incorrect_questions(self):
+        """Display all incorrectly answered questions"""
+        if not self.questions_answered_incorrectly:
+            return
+
+        self.console.clear()
+
+        self.console.print(
+            Panel(
+                f"[bold red]Review Incorrect Answers ({len(self.questions_answered_incorrectly)} questions)[/]",
+                box=box.DOUBLE,
+                border_style="red",
+                padding=(1, 2),
+            )
+        )
+        self.console.print()
+
+        for idx, item in enumerate(self.questions_answered_incorrectly, 1):
+            q = item["question"]
+            your_answer = item["your_answer"]
+            correct_answer = item["correct_answer"]
+
+            # Question header
+            self.console.print(
+                f"[bold yellow]Question {idx}:[/] [cyan]{q['id']}[/]",
+            )
+            self.console.print(f"[white]{q['question']}[/]")
+            self.console.print()
+
+            # Answers
+            self.console.print(f"  [bold red]Your answer:[/] {your_answer}")
+            self.console.print(f"  [bold green]Correct answer:[/] {correct_answer}")
+            self.console.print()
+            self.console.print("[dim]" + "─" * 80 + "[/dim]")
+            self.console.print()
+
+        self.console.print("[cyan]Press any key to continue[/]")
+        self.get_key()
 
     def show_results(self):
         """Display final score"""
@@ -196,9 +241,18 @@ class Quiz:
             )
         )
         self.console.print()
-        self.console.print("[cyan]Press any key to return to menu[/]")
+
+        # Show incorrect questions if any
+        if self.questions_answered_incorrectly:
+            self.console.print("[cyan]Press any key to review incorrect answers[/]")
+        else:
+            self.console.print("[cyan]Press any key to return to menu[/]")
 
         self.get_key()
+
+        # Display incorrect questions review
+        if self.questions_answered_incorrectly:
+            self.show_incorrect_questions()
 
     def run_quiz(self, category_name):
         """Main quiz loop"""
