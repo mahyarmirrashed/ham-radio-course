@@ -27,6 +27,7 @@ class Quiz:
         self.current_index = 0
         self.score = 0
         self.current_choices = []
+        self.limit_questions = True  # False when SHIFT+number is used (all questions)
 
         # Load and organize questions from JSON file
         self._load(filepath)
@@ -86,12 +87,19 @@ class Quiz:
 
         self.console.print(table)
         self.console.print()
-        self.console.print("[cyan]Press category number to start, or 'q' to quit[/]")
+        self.console.print("[cyan]Press category number to start (SHIFT+number for all questions), or 'q' to quit[/]")
 
         return sorted_cats
 
     def select_category(self, sorted_cats):
         """Handle category selection"""
+        # Mapping of shifted digit symbols to their base digit index
+        # SHIFT+1=!, SHIFT+2=@, ..., SHIFT+9=(, SHIFT+0=)
+        shifted_digit_map = {
+            "!": 1, "@": 2, "#": 3, "$": 4, "%": 5,
+            "^": 6, "&": 7, "*": 8, "(": 9, ")": 0,
+        }
+
         while True:
             key = self.get_key()
 
@@ -100,6 +108,7 @@ class Quiz:
 
             if key.isdigit():
                 idx = int(key)
+                self.limit_questions = True
 
                 # All categories
                 if idx == 0:
@@ -114,10 +123,28 @@ class Quiz:
                     self.questions = self.categories[cat_name].copy()
                     return cat_name
 
+            elif key in shifted_digit_map:
+                idx = shifted_digit_map[key]
+                self.limit_questions = False
+
+                # All categories (SHIFT+0)
+                if idx == 0:
+                    self.questions = []
+                    for qs in self.categories.values():
+                        self.questions.extend(qs)
+                    return "All Categories"
+
+                # Specific category (SHIFT+1 through SHIFT+9)
+                elif 1 <= idx <= len(sorted_cats):
+                    cat_name = sorted_cats[idx - 1][0]
+                    self.questions = self.categories[cat_name].copy()
+                    return cat_name
+
     def prepare_quiz(self):
         """Shuffle and limit questions"""
         random.shuffle(self.questions)
-        self.questions = self.questions[:20]
+        if self.limit_questions:
+            self.questions = self.questions[:20]
         self.current_index = 0
         self.score = 0
         self.questions_answered_incorrectly = []
