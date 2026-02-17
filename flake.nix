@@ -31,6 +31,9 @@
           packages = [
             pythonEnv
           ];
+          shellHook = ''
+            alias start="python main.py quiz"
+          '';
         };
       }
     );
