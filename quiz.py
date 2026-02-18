@@ -12,6 +12,54 @@ from rich.panel import Panel
 from rich.table import Table
 
 
+def select_level(console):
+    """Display level selection screen and return the chosen filepath via a single keypress."""
+    files = {
+        "1": Path("data/amateur_basic_question.json"),
+        "2": Path("data/amateur_advanced_question.json"),
+    }
+
+    while True:
+        console.clear()
+        console.print(
+            Panel(
+                "[bold gold1]Canadian Amateur Radio Quiz[/]",
+                box=box.DOUBLE,
+                style="blue",
+            )
+        )
+        console.print()
+
+        table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan")
+        table.add_column("#", justify="right", style="cyan")
+        table.add_column("Level", style="green")
+        table.add_row("1", "Basic")
+        table.add_row("2", "Advanced")
+
+        console.print(table)
+        console.print()
+        console.print("[cyan]Press 1 or 2 to select a level:[/]")
+
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            key = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+        if key in files:
+            filepath = files[key]
+            if not filepath.exists():
+                console.clear()
+                console.print(f"[red]File not found: {filepath}[/]")
+                console.print(
+                    "[yellow]Run 'update' command first to download question banks.[/]"
+                )
+                sys.exit(1)
+            return filepath
+
+
 class Quiz:
     def __init__(self, filepath):
         """

@@ -161,51 +161,9 @@ def update():
 @app.command()
 def quiz():
     """Run interactive quiz."""
-    from quiz import Quiz
+    from quiz import Quiz, select_level
 
-    console.clear()
-
-    # Title
-    console.print(
-        Panel(
-            "[bold gold1]Canadian Amateur Radio Quiz[/]", box=box.DOUBLE, style="blue"
-        )
-    )
-    console.print()
-
-    # Level selection table
-    table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan")
-    table.add_column("#", justify="right", style="cyan")
-    table.add_column("Level", style="green")
-
-    table.add_row("1", "Basic")
-    table.add_row("2", "Advanced")
-
-    console.print(table)
-    console.print()
-    console.print("[cyan]Select question level (1 or 2):[/] ", end="")
-
-    choice = typer.prompt("", type=int)
-
-    # Map choice to file
-    files = {
-        1: Path("data/amateur_basic_question.json"),
-        2: Path("data/amateur_advanced_question.json"),
-    }
-
-    if choice not in files:
-        console.print("[red]Invalid choice! Please select 1 or 2.[/]")
-        raise typer.Exit(1)
-
-    filepath = files[choice]
-
-    if not filepath.exists():
-        console.print(f"[red]File not found: {filepath}[/]")
-        console.print(
-            "[yellow]Run 'update' command first to download question banks.[/]"
-        )
-        raise typer.Exit(1)
-
+    filepath = select_level(console)
     quiz = Quiz(filepath)
     quiz.run()
 
