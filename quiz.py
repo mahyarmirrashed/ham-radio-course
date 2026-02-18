@@ -32,13 +32,13 @@ def select_level(console):
 
         table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan")
         table.add_column("#", justify="right", style="cyan")
-        table.add_column("Level", style="green")
+        table.add_column("Course", style="green")
         table.add_row("1", "Basic")
         table.add_row("2", "Advanced")
 
         console.print(table)
         console.print()
-        console.print("[cyan]Press 1 or 2 to select a level:[/]")
+        console.print("[cyan]Press 1 or 2 to select a course, or 'q' to quit[/]")
 
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
@@ -47,6 +47,9 @@ def select_level(console):
             key = sys.stdin.read(1)
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+        if key == "q":
+            return None
 
         if key in files:
             filepath = files[key]
@@ -135,7 +138,9 @@ class Quiz:
 
         self.console.print(table)
         self.console.print()
-        self.console.print("[cyan]Press category number to start (SHIFT+number for all questions), or 'q' to quit[/]")
+        self.console.print(
+            "[cyan]Press category number to start (SHIFT+number for all questions), or 'q' to return[/]"
+        )
 
         return sorted_cats
 
@@ -144,8 +149,16 @@ class Quiz:
         # Mapping of shifted digit symbols to their base digit index
         # SHIFT+1=!, SHIFT+2=@, ..., SHIFT+9=(, SHIFT+0=)
         shifted_digit_map = {
-            "!": 1, "@": 2, "#": 3, "$": 4, "%": 5,
-            "^": 6, "&": 7, "*": 8, "(": 9, ")": 0,
+            "!": 1,
+            "@": 2,
+            "#": 3,
+            "$": 4,
+            "%": 5,
+            "^": 6,
+            "&": 7,
+            "*": 8,
+            "(": 9,
+            ")": 0,
         }
 
         while True:
@@ -233,7 +246,7 @@ class Quiz:
             self.console.print(f"  [bold cyan]{i}.[/] {choice}")
 
         self.console.print()
-        self.console.print("[dim]Press 1-4 to answer, 'q' to quit[/]")
+        self.console.print("[dim]Press 1-4 to answer, 'q' to return[/]")
 
     def check_answer(self, choice_num):
         """Check if answer is correct and show feedback"""
@@ -351,16 +364,12 @@ class Quiz:
         return True
 
     def run(self):
-        """Main application loop"""
+        """Main quiz loop; returns when the user presses q to go back to course selection."""
         while True:
             sorted_cats = self.show_menu()
             category = self.select_category(sorted_cats)
 
             if category is None:
-                break
+                return
 
-            if not self.run_quiz(category):
-                continue
-
-        self.console.clear()
-        self.console.print("[green]Thanks for using the quiz app![/]")
+            self.run_quiz(category)

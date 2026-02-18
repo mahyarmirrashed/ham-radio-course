@@ -163,9 +163,15 @@ def quiz():
     """Run interactive quiz."""
     from quiz import Quiz, select_level
 
-    filepath = select_level(console)
-    quiz = Quiz(filepath)
-    quiz.run()
+    while True:
+        filepath = select_level(console)
+
+        if filepath is None:
+            console.clear()
+            console.print("[green]Thanks for using the quiz app![/]")
+            break
+
+        Quiz(filepath).run()
 
 
 if __name__ == "__main__":
