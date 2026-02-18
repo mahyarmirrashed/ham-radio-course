@@ -89,7 +89,7 @@ class Quiz:
         """Clear the screen and print the app title header."""
         print_header(self.console)
 
-    def _show_menu(self) -> list:
+    def _show_menu(self, sorted_cats: list) -> list:
         """Display category selection menu and return sorted categories."""
         self._print_header()
 
@@ -102,7 +102,6 @@ class Quiz:
         total_qs = sum(len(qs) for qs in self.categories.values())
         table.add_row("0", "All Categories", str(total_qs))
 
-        sorted_cats = sorted(self.categories.items())
         for idx, (cat_name, qs) in enumerate(sorted_cats, 1):
             table.add_row(str(idx), cat_name, str(len(qs)))
 
@@ -329,8 +328,10 @@ class Quiz:
 
     def run(self) -> None:
         """Main loop: show the category menu until the user returns to course selection."""
+        sorted_cats = sorted(self.categories.items())
+
         while True:
-            sorted_cats = self._show_menu()
+            self._show_menu(sorted_cats)
             category = self._select_category(sorted_cats)
 
             if category is None:
