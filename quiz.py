@@ -1,52 +1,41 @@
 import json
 import random
 import sys
-import termios
-import tty
 from pathlib import Path
 from time import sleep
 
 from rich import box
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
+
+from util import get_key, make_table, print_header
 
 
-def select_level(console):
-    """Display level selection screen and return the chosen filepath via a single keypress."""
+def select_level(console: Console) -> Path | None:
+    """Display course selection screen and return the chosen filepath via a single keypress.
+
+    Returns None if the user presses 'q' to quit.
+    """
     files = {
         "1": Path("data/amateur_basic_question.json"),
         "2": Path("data/amateur_advanced_question.json"),
     }
 
     while True:
-        console.clear()
-        console.print(
-            Panel(
-                "[bold gold1]Canadian Amateur Radio Quiz[/]",
-                box=box.DOUBLE,
-                style="blue",
-            )
-        )
-        console.print()
+        print_header(console)
 
-        table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan")
-        table.add_column("#", justify="right", style="cyan")
-        table.add_column("Course", style="green")
+        table = make_table(
+            ("#", {"justify": "right", "style": "cyan"}),
+            ("Course", {"style": "green"}),
+        )
         table.add_row("1", "Basic")
         table.add_row("2", "Advanced")
 
         console.print(table)
         console.print()
-        console.print("[cyan]Press 1 or 2 to select a course, or 'q' to quit[/]")
+        console.print("[cyan]Press 1 or 2 to select a course, or 'q' to quit:[/]")
 
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(fd)
-            key = sys.stdin.read(1)
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        key = get_key()
 
         if key == "q":
             return None
@@ -64,74 +53,55 @@ def select_level(console):
 
 
 class Quiz:
-    def __init__(self, filepath):
-        """
-        Initialize Quiz with questions from a JSON file.
-
-        Args:
-            filepath: Path to JSON file containing questions
-        """
+    def __init__(self, filepath: Path):
         self.console = Console()
-        self.categories = {}
-        self.questions = []
-        self.questions_answered_incorrectly = []
+        self.categories: dict = {}
+        self.questions: list = []
+        self.questions_answered_incorrectly: list = []
         self.current_index = 0
         self.score = 0
-        self.current_choices = []
-        self.limit_questions = True  # False when SHIFT+number is used (all questions)
+        self.current_choices: list = []
+        self.limit_questions = True
 
-        # Load and organize questions from JSON file
         self._load(filepath)
 
-    def _load(self, filepath):
-        """Load questions from JSON file and organize by category"""
+    # ------------------------------------------------------------------
+    # Data
+    # ------------------------------------------------------------------
+
+    def _load(self, filepath: Path) -> None:
+        """Load questions from JSON file and organize by category."""
         with open(filepath, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         for code, content in data.items():
             title = content["title"]
             questions = content["questions"]
-
             if title not in self.categories:
                 self.categories[title] = []
             self.categories[title].extend(questions)
 
-    def get_key(self):
-        """Get single keypress from user"""
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(fd)
-            key = sys.stdin.read(1)
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        return key
+    # ------------------------------------------------------------------
+    # UI helpers
+    # ------------------------------------------------------------------
 
-    def show_menu(self):
-        """Display category selection menu"""
-        self.console.clear()
+    def _print_header(self) -> None:
+        """Clear the screen and print the app title header."""
+        print_header(self.console)
 
-        # Title
-        self.console.print(
-            Panel(
-                "[bold gold1]Canadian Amateur Radio Quiz[/]",
-                box=box.DOUBLE,
-                style="blue",
-            )
+    def _show_menu(self) -> list:
+        """Display category selection menu and return sorted categories."""
+        self._print_header()
+
+        table = make_table(
+            ("#", {"justify": "right", "style": "cyan"}),
+            ("Category", {"style": "green"}),
+            ("Questions", {"justify": "right", "style": "yellow"}),
         )
-        self.console.print()
 
-        # Category table
-        table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan")
-        table.add_column("#", justify="right", style="cyan")
-        table.add_column("Category", style="green")
-        table.add_column("Questions", justify="right", style="yellow")
-
-        # Add "All Categories" option
         total_qs = sum(len(qs) for qs in self.categories.values())
         table.add_row("0", "All Categories", str(total_qs))
 
-        # Add individual categories
         sorted_cats = sorted(self.categories.items())
         for idx, (cat_name, qs) in enumerate(sorted_cats, 1):
             table.add_row(str(idx), cat_name, str(len(qs)))
@@ -144,10 +114,34 @@ class Quiz:
 
         return sorted_cats
 
-    def select_category(self, sorted_cats):
-        """Handle category selection"""
-        # Mapping of shifted digit symbols to their base digit index
-        # SHIFT+1=!, SHIFT+2=@, ..., SHIFT+9=(, SHIFT+0=)
+    # ------------------------------------------------------------------
+    # Category selection
+    # ------------------------------------------------------------------
+
+    def _load_category(self, idx: int, sorted_cats: list) -> str | None:
+        """Populate self.questions for the given category index.
+
+        Returns the category name, or None if idx is out of range.
+        """
+        if idx == 0:
+            self.questions = []
+            for qs in self.categories.values():
+                self.questions.extend(qs)
+            return "All Categories"
+
+        if 1 <= idx <= len(sorted_cats):
+            cat_name = sorted_cats[idx - 1][0]
+            self.questions = self.categories[cat_name].copy()
+            return cat_name
+
+        return None
+
+    def _select_category(self, sorted_cats: list) -> str | None:
+        """Wait for a keypress and resolve the chosen category.
+
+        Returns the category name, or None if the user presses 'q'.
+        """
+        # Shifted digit symbols → their base digit (SHIFT+1=!, …, SHIFT+0=))
         shifted_digit_map = {
             "!": 1,
             "@": 2,
@@ -162,47 +156,29 @@ class Quiz:
         }
 
         while True:
-            key = self.get_key()
+            key = get_key()
 
             if key == "q":
                 return None
 
             if key.isdigit():
-                idx = int(key)
                 self.limit_questions = True
-
-                # All categories
-                if idx == 0:
-                    self.questions = []
-                    for qs in self.categories.values():
-                        self.questions.extend(qs)
-                    return "All Categories"
-
-                # Specific category
-                elif 1 <= idx <= len(sorted_cats):
-                    cat_name = sorted_cats[idx - 1][0]
-                    self.questions = self.categories[cat_name].copy()
-                    return cat_name
+                result = self._load_category(int(key), sorted_cats)
+                if result is not None:
+                    return result
 
             elif key in shifted_digit_map:
-                idx = shifted_digit_map[key]
                 self.limit_questions = False
+                result = self._load_category(shifted_digit_map[key], sorted_cats)
+                if result is not None:
+                    return result
 
-                # All categories (SHIFT+0)
-                if idx == 0:
-                    self.questions = []
-                    for qs in self.categories.values():
-                        self.questions.extend(qs)
-                    return "All Categories"
+    # ------------------------------------------------------------------
+    # Quiz flow
+    # ------------------------------------------------------------------
 
-                # Specific category (SHIFT+1 through SHIFT+9)
-                elif 1 <= idx <= len(sorted_cats):
-                    cat_name = sorted_cats[idx - 1][0]
-                    self.questions = self.categories[cat_name].copy()
-                    return cat_name
-
-    def prepare_quiz(self):
-        """Shuffle and limit questions"""
+    def _prepare_quiz(self) -> None:
+        """Shuffle questions and apply the 20-question cap when appropriate."""
         random.shuffle(self.questions)
         if self.limit_questions:
             self.questions = self.questions[:20]
@@ -210,13 +186,12 @@ class Quiz:
         self.score = 0
         self.questions_answered_incorrectly = []
 
-    def show_question(self):
-        """Display current question"""
+    def _show_question(self) -> None:
+        """Display the current question and its shuffled answer choices."""
         self.console.clear()
 
         q = self.questions[self.current_index]
 
-        # Header
         self.console.print(
             Panel(
                 f"[bold]Question {self.current_index + 1} of {len(self.questions)}[/]",
@@ -225,7 +200,6 @@ class Quiz:
         )
         self.console.print()
 
-        # Question text
         self.console.print(
             Panel(
                 f"[bold white]{q['id']}: {q['question']}[/]",
@@ -236,20 +210,18 @@ class Quiz:
         )
         self.console.print()
 
-        # Prepare shuffled choices
         choices = [q["answer"], q["distractor_1"], q["distractor_2"], q["distractor_3"]]
         random.shuffle(choices)
         self.current_choices = choices
 
-        # Display choices
         for i, choice in enumerate(choices, 1):
             self.console.print(f"  [bold cyan]{i}.[/] {choice}")
 
         self.console.print()
         self.console.print("[dim]Press 1-4 to answer, 'q' to return[/]")
 
-    def check_answer(self, choice_num):
-        """Check if answer is correct and show feedback"""
+    def _check_answer(self, choice_num: int) -> None:
+        """Validate the selected answer and display immediate feedback."""
         q = self.questions[self.current_index]
         selected = self.current_choices[choice_num - 1]
         correct = q["answer"]
@@ -260,7 +232,6 @@ class Quiz:
             self.score += 1
             self.console.print(Panel("[bold green]✓ Correct![/]", border_style="green"))
         else:
-            # Track incorrect answer
             self.questions_answered_incorrectly.append(
                 {"question": q, "your_answer": selected, "correct_answer": correct}
             )
@@ -273,13 +244,12 @@ class Quiz:
 
         sleep(2)
 
-    def show_incorrect_questions(self):
-        """Display all incorrectly answered questions"""
+    def _show_incorrect_questions(self) -> None:
+        """Display all incorrectly answered questions for review."""
         if not self.questions_answered_incorrectly:
             return
 
         self.console.clear()
-
         self.console.print(
             Panel(
                 f"[bold red]Review Incorrect Answers ({len(self.questions_answered_incorrectly)} questions)[/]",
@@ -292,32 +262,25 @@ class Quiz:
 
         for idx, item in enumerate(self.questions_answered_incorrectly, 1):
             q = item["question"]
-            your_answer = item["your_answer"]
-            correct_answer = item["correct_answer"]
-
-            # Question header
-            self.console.print(
-                f"[bold yellow]Question {idx}:[/] [cyan]{q['id']}[/]",
-            )
+            self.console.print(f"[bold yellow]Question {idx}:[/] [cyan]{q['id']}[/]")
             self.console.print(f"[white]{q['question']}[/]")
             self.console.print()
-
-            # Answers
-            self.console.print(f"  [bold red]Your answer:[/] {your_answer}")
-            self.console.print(f"  [bold green]Correct answer:[/] {correct_answer}")
+            self.console.print(f"  [bold red]Your answer:[/] {item['your_answer']}")
+            self.console.print(
+                f"  [bold green]Correct answer:[/] {item['correct_answer']}"
+            )
             self.console.print()
             self.console.print("[dim]" + "─" * 80 + "[/dim]")
             self.console.print()
 
         self.console.print("[cyan]Press any key to continue[/]")
-        self.get_key()
+        get_key()
 
-    def show_results(self):
-        """Display final score"""
+    def _show_results(self) -> None:
+        """Display the final score and optionally review incorrect answers."""
         self.console.clear()
 
         percentage = (self.score / len(self.questions)) * 100
-
         self.console.print(
             Panel(
                 f"[bold gold1]Quiz Complete![/]\n\n"
@@ -330,46 +293,47 @@ class Quiz:
         )
         self.console.print()
 
-        # Show incorrect questions if any
         if self.questions_answered_incorrectly:
             self.console.print("[cyan]Press any key to review incorrect answers[/]")
         else:
             self.console.print("[cyan]Press any key to return to menu[/]")
 
-        self.get_key()
+        get_key()
 
-        # Display incorrect questions review
         if self.questions_answered_incorrectly:
-            self.show_incorrect_questions()
+            self._show_incorrect_questions()
 
-    def run_quiz(self, category_name):
-        """Main quiz loop"""
-        self.prepare_quiz()
+    def _run_quiz(self, category_name: str) -> None:
+        """Run one quiz session for the given category."""
+        self._prepare_quiz()
 
         while self.current_index < len(self.questions):
-            self.show_question()
+            self._show_question()
 
             while True:
-                key = self.get_key()
+                key = get_key()
 
                 if key == "q":
-                    return False
+                    return
 
                 if key in ["1", "2", "3", "4"]:
-                    self.check_answer(int(key))
+                    self._check_answer(int(key))
                     self.current_index += 1
                     break
 
-        self.show_results()
-        return True
+        self._show_results()
 
-    def run(self):
-        """Main quiz loop; returns when the user presses q to go back to course selection."""
+    # ------------------------------------------------------------------
+    # Entry point
+    # ------------------------------------------------------------------
+
+    def run(self) -> None:
+        """Main loop: show the category menu until the user returns to course selection."""
         while True:
-            sorted_cats = self.show_menu()
-            category = self.select_category(sorted_cats)
+            sorted_cats = self._show_menu()
+            category = self._select_category(sorted_cats)
 
             if category is None:
                 return
 
-            self.run_quiz(category)
+            self._run_quiz(category)
