@@ -2,6 +2,8 @@
 
 A simple terminal-based quiz app for studying Canadian Amateur Radio exam questions.
 
+![Quiz Question Screenshot](./res/question.png)
+
 ## Usage
 
 ### 1. Download Questions
@@ -41,3 +43,8 @@ Questions are sourced from the official Canadian Amateur Radio question banks:
 
 - Basic: https://apc-cap.ic.gc.ca/datafiles/amat_basic_quest.zip
 - Advanced: https://apc-cap.ic.gc.ca/datafiles/amat_adv_quest.zip
+
+## Other Screenshots
+
+![Quiz Course Selection](./res/course-selection.png)
+![Quiz Category Selection](./res/category-selection.png)
