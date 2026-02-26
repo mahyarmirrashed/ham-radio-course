@@ -1,6 +1,4 @@
 import sys
-import termios
-import tty
 
 from rich import box
 from rich.console import Console
@@ -12,14 +10,22 @@ APP_TITLE = "Canadian Amateur Radio Quiz"
 
 def get_key() -> str:
     """Read a single raw keypress from stdin without requiring Enter."""
-    fd = sys.stdin.fileno()
-    old_settings = termios.tcgetattr(fd)
-    try:
-        tty.setraw(fd)
-        key = sys.stdin.read(1)
-    finally:
-        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-    return key
+    if sys.platform == "win32":
+        import msvcrt
+
+        return msvcrt.getwch()
+    else:
+        import termios
+        import tty
+
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            key = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return key
 
 
 def print_header(console: Console, title: str = APP_TITLE) -> None:
