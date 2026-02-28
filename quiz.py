@@ -48,9 +48,9 @@ def quiz():
             if category is None:
                 break  # back to course selection
 
-            category_idx, limit_questions = category
+            category_idx, ask_all_questions = category
             questions = _load_category(category_idx, categories)
-            Quiz(questions, limit_questions).run()
+            Quiz(questions, ask_all_questions).run()
 
 
 def _prompt_for_course() -> Path | None:
@@ -132,7 +132,7 @@ def _show_category_menu(categories: list[Category]) -> None:
 
 
 def _prompt_for_category(categories: list[Category]) -> tuple[int, bool] | None:
-    """Wait for a keypress and return (category_idx, limit_questions), or None if 'q'."""
+    """Wait for a keypress and return (category_idx, ask_all_questions), or None if 'q'."""
     while True:
         key = get_key()
 
@@ -142,12 +142,12 @@ def _prompt_for_category(categories: list[Category]) -> tuple[int, bool] | None:
         if key.isdigit():
             idx = int(key)
             if idx == 0 or 1 <= idx <= len(categories):
-                return (idx, True)
+                return (idx, False)
 
         elif key in _SHIFTED_DIGIT_MAP:
             idx = _SHIFTED_DIGIT_MAP[key]
             if idx == 0 or 1 <= idx <= len(categories):
-                return (idx, False)
+                return (idx, True)
 
 
 def _load_category(idx: int, categories: list[Category]) -> list[Question]:
@@ -167,10 +167,10 @@ def _load_category(idx: int, categories: list[Category]) -> list[Question]:
 
 
 class Quiz:
-    def __init__(self, questions: list[Question], limit_questions: bool):
+    def __init__(self, questions: list[Question], ask_all_questions: bool):
         self.console = Console()
         self.questions: list[Question] = questions
-        self.limit_questions = limit_questions
+        self.ask_all_questions = ask_all_questions
         self.incorrect: list[IncorrectAnswer] = []
         self.current_index = 0
         self.score = 0
@@ -179,7 +179,7 @@ class Quiz:
     def _prepare_quiz(self) -> None:
         """Shuffle questions and apply the 20-question cap when appropriate."""
         random.shuffle(self.questions)
-        if self.limit_questions:
+        if not self.ask_all_questions:
             self.questions = self.questions[:20]
         self.current_index = 0
         self.score = 0
