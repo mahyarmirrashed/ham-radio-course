@@ -74,7 +74,7 @@ class Quiz:
         with open(filepath, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        for code, content in data.items():
+        for _, content in data.items():
             title = content["title"]
             questions = content["questions"]
             if title not in self.categories:
@@ -85,13 +85,9 @@ class Quiz:
     # UI helpers
     # ------------------------------------------------------------------
 
-    def _print_header(self) -> None:
-        """Clear the screen and print the app title header."""
+    def _show_menu(self, sorted_cats: list) -> None:
+        """Display category selection menu."""
         print_header(self.console)
-
-    def _show_menu(self, sorted_cats: list) -> list:
-        """Display category selection menu and return sorted categories."""
-        self._print_header()
 
         table = make_table(
             ("#", {"justify": "right", "style": "cyan"}),
@@ -110,8 +106,6 @@ class Quiz:
         self.console.print(
             "[cyan]Press category number to start (SHIFT+number for all questions), or 'q' to return[/]"
         )
-
-        return sorted_cats
 
     # ------------------------------------------------------------------
     # Category selection
@@ -305,8 +299,8 @@ class Quiz:
         if self.questions_answered_incorrectly:
             self._show_incorrect_questions()
 
-    def _run_quiz(self, category_name: str) -> None:
-        """Run one quiz session for the given category."""
+    def _run_quiz(self) -> None:
+        """Run one quiz session for the selected category."""
         self._prepare_quiz()
 
         while self.current_index < len(self.questions):
@@ -346,4 +340,4 @@ class Quiz:
             if category is None:
                 return
 
-            self._run_quiz(category)
+            self._run_quiz()
