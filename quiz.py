@@ -219,8 +219,11 @@ class Quiz:
         self.console.print()
         self.console.print("[dim]Press 1-4 to answer, 'q' to return[/]")
 
-    def _check_answer(self, choice_num: int) -> None:
-        """Validate the selected answer and display immediate feedback."""
+    def _check_answer(self, choice_num: int) -> bool:
+        """Validate the selected answer and display immediate feedback.
+
+        Returns True if correct, False if wrong.
+        """
         q = self.questions[self.current_index]
         selected = self.current_choices[choice_num - 1]
         correct = q["answer"]
@@ -230,6 +233,7 @@ class Quiz:
         if selected == correct:
             self.score += 1
             self.console.print(Panel("[bold green]✓ Correct![/]", border_style="green"))
+            return True
         else:
             self.questions_answered_incorrectly.append(
                 {"question": q, "your_answer": selected, "correct_answer": correct}
@@ -240,8 +244,7 @@ class Quiz:
                     border_style="red",
                 )
             )
-
-        sleep(2)
+            return False
 
     def _show_incorrect_questions(self) -> None:
         """Display all incorrectly answered questions for review."""
@@ -316,7 +319,13 @@ class Quiz:
                     return
 
                 if key in ["1", "2", "3", "4"]:
-                    self._check_answer(int(key))
+                    correct = self._check_answer(int(key))
+                    if correct:
+                        sleep(2)
+                    else:
+                        self.console.print()
+                        self.console.print("[cyan]Press any key to continue[/]")
+                        get_key()
                     self.current_index += 1
                     break
 
