@@ -13,6 +13,20 @@ from util import get_key, print_header
 
 _console = Console()
 
+# Shifted digit symbols → their base digit index (SHIFT+1=!, …, SHIFT+0=))
+_SHIFTED_DIGIT_MAP = {
+    "!": 1,
+    "@": 2,
+    "#": 3,
+    "$": 4,
+    "%": 5,
+    "^": 6,
+    "&": 7,
+    "*": 8,
+    "(": 9,
+    ")": 0,
+}
+
 
 def quiz():
     """Run the interactive quiz."""
@@ -24,7 +38,24 @@ def quiz():
             _console.print("[green]Thanks for using the quiz app![/]")
             break
 
-        Quiz(course_filepath).run()
+        categories = _load_categories(course_filepath)
+        sorted_cats = sorted(categories.items())
+
+        while True:
+            _show_category_menu(sorted_cats, categories)
+            result = _prompt_for_category(sorted_cats)
+
+            if result is None:
+                break  # back to course selection
+
+            idx, limit_questions = result
+            questions = _load_category(idx, sorted_cats, categories)
+            Quiz(questions, limit_questions).run()
+
+
+# ------------------------------------------------------------------
+# Course selection
+# ------------------------------------------------------------------
 
 
 def _prompt_for_course() -> Path | None:
@@ -68,123 +99,96 @@ def _prompt_for_course() -> Path | None:
             return filepath
 
 
+# ------------------------------------------------------------------
+# Category selection
+# ------------------------------------------------------------------
+
+
+def _load_categories(filepath: Path) -> dict:
+    """Load questions from a JSON file and return them organised by category."""
+    categories: dict = {}
+
+    with open(filepath, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    for _, content in data.items():
+        title = content["title"]
+        questions = content["questions"]
+        if title not in categories:
+            categories[title] = []
+        categories[title].extend(questions)
+
+    return categories
+
+
+def _show_category_menu(sorted_cats: list, categories: dict) -> None:
+    """Display the category selection menu."""
+    _console.clear()
+    print_header(_console)
+
+    table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan")
+    table.add_column("#", justify="right", style="cyan")
+    table.add_column("Category", style="green")
+    table.add_column("Questions", justify="right", style="yellow")
+
+    total_qs = sum(len(qs) for qs in categories.values())
+    table.add_row("0", "All Categories", str(total_qs))
+
+    for idx, (cat_name, qs) in enumerate(sorted_cats, 1):
+        table.add_row(str(idx), cat_name, str(len(qs)))
+
+    _console.print(table)
+    _console.print()
+    _console.print(
+        "[cyan]Press category number to start (SHIFT+number for all questions), or 'q' to return[/]"
+    )
+
+
+def _prompt_for_category(sorted_cats: list) -> tuple[int, bool] | None:
+    """Wait for a keypress and return (category_idx, limit_questions), or None if 'q'."""
+    while True:
+        key = get_key()
+
+        if key == "q":
+            return None
+
+        if key.isdigit():
+            idx = int(key)
+            if idx == 0 or 1 <= idx <= len(sorted_cats):
+                return (idx, True)
+
+        elif key in _SHIFTED_DIGIT_MAP:
+            idx = _SHIFTED_DIGIT_MAP[key]
+            if idx == 0 or 1 <= idx <= len(sorted_cats):
+                return (idx, False)
+
+
+def _load_category(idx: int, sorted_cats: list, categories: dict) -> list:
+    """Return the list of questions for the given category index."""
+    if idx == 0:
+        questions = []
+        for qs in categories.values():
+            questions.extend(qs)
+        return questions
+
+    cat_name = sorted_cats[idx - 1][0]
+    return categories[cat_name].copy()
+
+
+# ------------------------------------------------------------------
+# Quiz session
+# ------------------------------------------------------------------
+
+
 class Quiz:
-    def __init__(self, filepath: Path):
+    def __init__(self, questions: list, limit_questions: bool):
         self.console = Console()
-        self.categories: dict = {}
-        self.questions: list = []
+        self.questions = questions
+        self.limit_questions = limit_questions
         self.questions_answered_incorrectly: list = []
         self.current_index = 0
         self.score = 0
         self.current_choices: list = []
-        self.limit_questions = True
-
-        self._load(filepath)
-
-    # ------------------------------------------------------------------
-    # Data
-    # ------------------------------------------------------------------
-
-    def _load(self, filepath: Path) -> None:
-        """Load questions from JSON file and organize by category."""
-        with open(filepath, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        for _, content in data.items():
-            title = content["title"]
-            questions = content["questions"]
-            if title not in self.categories:
-                self.categories[title] = []
-            self.categories[title].extend(questions)
-
-    # ------------------------------------------------------------------
-    # UI helpers
-    # ------------------------------------------------------------------
-
-    def _show_menu(self, sorted_cats: list) -> None:
-        """Display category selection menu."""
-        self.console.clear()
-        print_header(self.console)
-
-        table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan")
-        table.add_column("#", justify="right", style="cyan")
-        table.add_column("Category", style="green")
-        table.add_column("Questions", justify="right", style="yellow")
-
-        total_qs = sum(len(qs) for qs in self.categories.values())
-        table.add_row("0", "All Categories", str(total_qs))
-
-        for idx, (cat_name, qs) in enumerate(sorted_cats, 1):
-            table.add_row(str(idx), cat_name, str(len(qs)))
-
-        self.console.print(table)
-        self.console.print()
-        self.console.print(
-            "[cyan]Press category number to start (SHIFT+number for all questions), or 'q' to return[/]"
-        )
-
-    # ------------------------------------------------------------------
-    # Category selection
-    # ------------------------------------------------------------------
-
-    def _load_category(self, idx: int, sorted_cats: list) -> str | None:
-        """Populate self.questions for the given category index.
-
-        Returns the category name, or None if idx is out of range.
-        """
-        if idx == 0:
-            self.questions = []
-            for qs in self.categories.values():
-                self.questions.extend(qs)
-            return "All Categories"
-
-        if 1 <= idx <= len(sorted_cats):
-            cat_name = sorted_cats[idx - 1][0]
-            self.questions = self.categories[cat_name].copy()
-            return cat_name
-
-        return None
-
-    def _select_category(self, sorted_cats: list) -> str | None:
-        """Wait for a keypress and resolve the chosen category.
-
-        Returns the category name, or None if the user presses 'q'.
-        """
-        # Shifted digit symbols → their base digit (SHIFT+1=!, …, SHIFT+0=))
-        shifted_digit_map = {
-            "!": 1,
-            "@": 2,
-            "#": 3,
-            "$": 4,
-            "%": 5,
-            "^": 6,
-            "&": 7,
-            "*": 8,
-            "(": 9,
-            ")": 0,
-        }
-
-        while True:
-            key = get_key()
-
-            if key == "q":
-                return None
-
-            if key.isdigit():
-                self.limit_questions = True
-                result = self._load_category(int(key), sorted_cats)
-                if result is not None:
-                    return result
-
-            elif key in shifted_digit_map:
-                self.limit_questions = False
-                result = self._load_category(shifted_digit_map[key], sorted_cats)
-                if result is not None:
-                    return result
-
-    # ------------------------------------------------------------------
-    # Quiz flow
-    # ------------------------------------------------------------------
 
     def _prepare_quiz(self) -> None:
         """Shuffle questions and apply the 20-question cap when appropriate."""
@@ -315,8 +319,8 @@ class Quiz:
         if self.questions_answered_incorrectly:
             self._show_incorrect_questions()
 
-    def _run_quiz(self) -> None:
-        """Run one quiz session for the selected category."""
+    def run(self) -> None:
+        """Run the quiz session."""
         self._prepare_quiz()
 
         while self.current_index < len(self.questions):
@@ -340,20 +344,3 @@ class Quiz:
                     break
 
         self._show_results()
-
-    # ------------------------------------------------------------------
-    # Entry point
-    # ------------------------------------------------------------------
-
-    def run(self) -> None:
-        """Main loop: show the category menu until the user returns to course selection."""
-        sorted_cats = sorted(self.categories.items())
-
-        while True:
-            self._show_menu(sorted_cats)
-            category = self._select_category(sorted_cats)
-
-            if category is None:
-                return
-
-            self._run_quiz()
