@@ -32,7 +32,7 @@
             pythonEnv
           ];
           shellHook = ''
-            alias start="python main.py quiz"
+            alias start="python ${toString ./.}/main.py quiz"
           '';
         };
       }
