@@ -43,13 +43,13 @@ def quiz():
 
         while True:
             _show_category_menu(categories)
-            result = _prompt_for_category(categories)
+            category = _prompt_for_category(categories)
 
-            if result is None:
+            if category is None:
                 break  # back to course selection
 
-            idx, limit_questions = result
-            questions = _load_category(idx, categories)
+            category_idx, limit_questions = category
+            questions = _load_category(category_idx, categories)
             Quiz(questions, limit_questions).run()
 
 
@@ -92,11 +92,6 @@ def _prompt_for_course() -> Path | None:
                 )
                 sys.exit(1)
             return filepath
-
-
-# ------------------------------------------------------------------
-# Category selection
-# ------------------------------------------------------------------
 
 
 def _load_categories(filepath: Path) -> list[Category]:
