@@ -39,17 +39,17 @@ def quiz():
             break
 
         categories = _load_categories(course_filepath)
-        categories_sorted = sorted(categories.items())
+        categories_items = list(categories.items())
 
         while True:
-            _show_category_menu(categories_sorted, categories)
-            result = _prompt_for_category(categories_sorted)
+            _show_category_menu(categories_items, categories)
+            result = _prompt_for_category(categories_items)
 
             if result is None:
                 break  # back to course selection
 
             idx, limit_questions = result
-            questions = _load_category(idx, categories_sorted, categories)
+            questions = _load_category(idx, categories_items, categories)
             Quiz(questions, limit_questions).run()
 
 
@@ -105,13 +105,13 @@ def _prompt_for_course() -> Path | None:
 
 
 def _load_categories(filepath: Path) -> dict:
-    """Load questions from a JSON file and return them organised by category."""
+    """Load questions from a JSON file and return them organised by category code order."""
     categories: dict = {}
 
     with open(filepath, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    for _, content in data.items():
+    for _, content in sorted(data.items()):
         title = content["title"]
         questions = content["questions"]
         if title not in categories:
