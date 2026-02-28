@@ -9,6 +9,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from models import Category, IncorrectAnswer, Question
 from util import get_key, print_header
 
 _console = Console()
@@ -50,11 +51,6 @@ def quiz():
             idx, limit_questions = result
             questions = _load_category(idx, categories)
             Quiz(questions, limit_questions).run()
-
-
-# ------------------------------------------------------------------
-# Course selection
-# ------------------------------------------------------------------
 
 
 def _prompt_for_course() -> Path | None:
@@ -103,24 +99,21 @@ def _prompt_for_course() -> Path | None:
 # ------------------------------------------------------------------
 
 
-def _load_categories(filepath: Path) -> dict:
-    """Load questions from a JSON file and return them organised by category code order."""
-    categories: dict = {}
+def _load_categories(filepath: Path) -> list[Category]:
+    """Load questions from a JSON file and return categories in code order."""
+    categories: list[Category] = []
 
     with open(filepath, "r", encoding="utf-8") as f:
         data = json.load(f)
 
     for _, content in sorted(data.items()):
-        title = content["title"]
-        questions = content["questions"]
-        if title not in categories:
-            categories[title] = []
-        categories[title].extend(questions)
+        questions = [Question(**question) for question in content["questions"]]
+        categories.append(Category(title=content["title"], questions=questions))
 
     return categories
 
 
-def _show_category_menu(categories: dict) -> None:
+def _show_category_menu(categories: list[Category]) -> None:
     """Display the category selection menu."""
     _console.clear()
     print_header(_console)
@@ -130,11 +123,11 @@ def _show_category_menu(categories: dict) -> None:
     table.add_column("Category", style="green")
     table.add_column("Questions", justify="right", style="yellow")
 
-    total_qs = sum(len(qs) for qs in categories.values())
-    table.add_row("0", "All Categories", str(total_qs))
+    total_questions = sum(len(c.questions) for c in categories)
+    table.add_row("0", "All Categories", str(total_questions))
 
-    for idx, (cat_name, qs) in enumerate(categories.items(), 1):
-        table.add_row(str(idx), cat_name, str(len(qs)))
+    for idx, category in enumerate(categories, 1):
+        table.add_row(str(idx), category.title, str(len(category.questions)))
 
     _console.print(table)
     _console.print()
@@ -143,7 +136,7 @@ def _show_category_menu(categories: dict) -> None:
     )
 
 
-def _prompt_for_category(categories: dict) -> tuple[int, bool] | None:
+def _prompt_for_category(categories: list[Category]) -> tuple[int, bool] | None:
     """Wait for a keypress and return (category_idx, limit_questions), or None if 'q'."""
     while True:
         key = get_key()
@@ -162,16 +155,15 @@ def _prompt_for_category(categories: dict) -> tuple[int, bool] | None:
                 return (idx, False)
 
 
-def _load_category(idx: int, categories: dict) -> list:
+def _load_category(idx: int, categories: list[Category]) -> list[Question]:
     """Return the list of questions for the given category index."""
     if idx == 0:
-        questions = []
-        for qs in categories.values():
-            questions.extend(qs)
+        questions: list[Question] = []
+        for category in categories:
+            questions.extend(category.questions)
         return questions
 
-    cat_name = list(categories.keys())[idx - 1]
-    return categories[cat_name].copy()
+    return categories[idx - 1].questions.copy()
 
 
 # ------------------------------------------------------------------
@@ -180,14 +172,14 @@ def _load_category(idx: int, categories: dict) -> list:
 
 
 class Quiz:
-    def __init__(self, questions: list, limit_questions: bool):
+    def __init__(self, questions: list[Question], limit_questions: bool):
         self.console = Console()
-        self.questions = questions
+        self.questions: list[Question] = questions
         self.limit_questions = limit_questions
-        self.questions_answered_incorrectly: list = []
+        self.incorrect: list[IncorrectAnswer] = []
         self.current_index = 0
         self.score = 0
-        self.current_choices: list = []
+        self.current_choices: list[str] = []
 
     def _prepare_quiz(self) -> None:
         """Shuffle questions and apply the 20-question cap when appropriate."""
@@ -196,7 +188,7 @@ class Quiz:
             self.questions = self.questions[:20]
         self.current_index = 0
         self.score = 0
-        self.questions_answered_incorrectly = []
+        self.incorrect = []
 
     def _show_question(self) -> None:
         """Display the current question and its shuffled answer choices."""
@@ -214,7 +206,7 @@ class Quiz:
 
         self.console.print(
             Panel(
-                f"[bold white]{q['id']}: {q['question']}[/]",
+                f"[bold white]{q.id}: {q.question}[/]",
                 box=box.ROUNDED,
                 border_style="cyan",
                 padding=(1, 2),
@@ -222,7 +214,7 @@ class Quiz:
         )
         self.console.print()
 
-        choices = [q["answer"], q["distractor_1"], q["distractor_2"], q["distractor_3"]]
+        choices = q.choices()
         random.shuffle(choices)
         self.current_choices = choices
 
@@ -239,21 +231,20 @@ class Quiz:
         """
         q = self.questions[self.current_index]
         selected = self.current_choices[choice_num - 1]
-        correct = q["answer"]
 
         self.console.print()
 
-        if selected == correct:
+        if selected == q.answer:
             self.score += 1
             self.console.print(Panel("[bold green]✓ Correct![/]", border_style="green"))
             return True
         else:
-            self.questions_answered_incorrectly.append(
-                {"question": q, "your_answer": selected, "correct_answer": correct}
+            self.incorrect.append(
+                IncorrectAnswer(question=q, answer=selected, correct_answer=q.answer)
             )
             self.console.print(
                 Panel(
-                    f"[bold red]✗ Wrong![/]\n\nCorrect answer: [yellow]{correct}[/]",
+                    f"[bold red]✗ Wrong![/]\n\nCorrect answer: [yellow]{q.answer}[/]",
                     border_style="red",
                 )
             )
@@ -261,13 +252,13 @@ class Quiz:
 
     def _show_incorrect_questions(self) -> None:
         """Display all incorrectly answered questions for review."""
-        if not self.questions_answered_incorrectly:
+        if not self.incorrect:
             return
 
         self.console.clear()
         self.console.print(
             Panel(
-                f"[bold red]Review Incorrect Answers ({len(self.questions_answered_incorrectly)} questions)[/]",
+                f"[bold red]Review Incorrect Answers ({len(self.incorrect)} questions)[/]",
                 box=box.DOUBLE,
                 border_style="red",
                 padding=(1, 2),
@@ -275,21 +266,22 @@ class Quiz:
         )
         self.console.print()
 
-        for idx, item in enumerate(self.questions_answered_incorrectly, 1):
-            q = item["question"]
-            self.console.print(f"[bold yellow]Question {idx}:[/] [cyan]{q['id']}[/]")
-            self.console.print(f"[white]{q['question']}[/]")
-            self.console.print()
-            self.console.print(f"  [bold red]Your answer:[/] {item['your_answer']}")
+        for idx, item in enumerate(self.incorrect, 1):
             self.console.print(
-                f"  [bold green]Correct answer:[/] {item['correct_answer']}"
+                f"[bold yellow]Question {idx}:[/] [cyan]{item.question.id}[/]"
+            )
+            self.console.print(f"[white]{item.question.question}[/]")
+            self.console.print()
+            self.console.print(f"  [bold red]Your answer:[/] {item.answer}")
+            self.console.print(
+                f"  [bold green]Correct answer:[/] {item.correct_answer}"
             )
             self.console.print()
             self.console.print("[dim]" + "─" * 80 + "[/dim]")
             self.console.print()
 
         self.console.print("[cyan]Press any key to continue[/]")
-        get_key()
+        _ = get_key()
 
     def _show_results(self) -> None:
         """Display the final score and optionally review incorrect answers."""
@@ -299,8 +291,8 @@ class Quiz:
         self.console.print(
             Panel(
                 f"[bold gold1]Quiz Complete![/]\n\n"
-                f"Score: [bold green]{self.score}[/] / {len(self.questions)}\n"
-                f"Percentage: [bold yellow]{percentage:.1f}%[/]",
+                + f"Score: [bold green]{self.score}[/] / {len(self.questions)}\n"
+                + f"Percentage: [bold yellow]{percentage:.1f}%[/]",
                 box=box.DOUBLE,
                 border_style="gold1",
                 padding=(2, 4),
@@ -308,14 +300,14 @@ class Quiz:
         )
         self.console.print()
 
-        if self.questions_answered_incorrectly:
+        if self.incorrect:
             self.console.print("[cyan]Press any key to review incorrect answers[/]")
         else:
             self.console.print("[cyan]Press any key to return to menu[/]")
 
-        get_key()
+        _ = get_key()
 
-        if self.questions_answered_incorrectly:
+        if self.incorrect:
             self._show_incorrect_questions()
 
     def run(self) -> None:
@@ -338,7 +330,7 @@ class Quiz:
                     else:
                         self.console.print()
                         self.console.print("[cyan]Press any key to continue[/]")
-                        get_key()
+                        _ = get_key()
                     self.current_index += 1
                     break
 
