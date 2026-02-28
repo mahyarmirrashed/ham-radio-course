@@ -171,6 +171,32 @@ class Quiz:
         self.score: int = 0
         self.current_choices: list[str] = []
 
+    def _check_answer(self, choice_num: int) -> bool:
+        """Validate the selected answer and display immediate feedback.
+
+        Returns True if correct, False if wrong.
+        """
+        q = self.questions[self.current_index]
+        selected = self.current_choices[choice_num - 1]
+
+        self.console.print()
+
+        if selected == q.answer:
+            self.score += 1
+            self.console.print(Panel("[bold green]✓ Correct![/]", border_style="green"))
+            return True
+        else:
+            self.incorrect.append(
+                IncorrectAnswer(question=q, answer=selected, correct_answer=q.answer)
+            )
+            self.console.print(
+                Panel(
+                    f"[bold red]✗ Wrong![/]\n\nCorrect answer: [yellow]{q.answer}[/]",
+                    border_style="red",
+                )
+            )
+            return False
+
     def _prepare_quiz(self) -> None:
         """Shuffle questions and apply the 20-question cap when appropriate."""
         random.shuffle(self.questions)
@@ -213,32 +239,6 @@ class Quiz:
 
         self.console.print()
         self.console.print("[dim]Press 1-4 to answer, 'q' to return[/]")
-
-    def _check_answer(self, choice_num: int) -> bool:
-        """Validate the selected answer and display immediate feedback.
-
-        Returns True if correct, False if wrong.
-        """
-        q = self.questions[self.current_index]
-        selected = self.current_choices[choice_num - 1]
-
-        self.console.print()
-
-        if selected == q.answer:
-            self.score += 1
-            self.console.print(Panel("[bold green]✓ Correct![/]", border_style="green"))
-            return True
-        else:
-            self.incorrect.append(
-                IncorrectAnswer(question=q, answer=selected, correct_answer=q.answer)
-            )
-            self.console.print(
-                Panel(
-                    f"[bold red]✗ Wrong![/]\n\nCorrect answer: [yellow]{q.answer}[/]",
-                    border_style="red",
-                )
-            )
-            return False
 
     def _show_incorrect_questions(self) -> None:
         """Display all incorrectly answered questions for review."""
