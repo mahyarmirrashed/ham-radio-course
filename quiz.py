@@ -17,17 +17,17 @@ _console = Console()
 def quiz():
     """Run the interactive quiz."""
     while True:
-        filepath = select_level(_console)
+        course_filepath = _prompt_for_course()
 
-        if filepath is None:
+        if course_filepath is None:
             _console.clear()
             _console.print("[green]Thanks for using the quiz app![/]")
             break
 
-        Quiz(filepath).run()
+        Quiz(course_filepath).run()
 
 
-def select_level(console: Console) -> Path | None:
+def _prompt_for_course() -> Path | None:
     """Display course selection screen and return the chosen filepath via a single keypress.
 
     Returns None if the user presses 'q' to quit.
@@ -38,8 +38,8 @@ def select_level(console: Console) -> Path | None:
     }
 
     while True:
-        console.clear()
-        print_header(console)
+        _console.clear()
+        print_header(_console)
 
         table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan")
         table.add_column("#", justify="right", style="cyan")
@@ -47,9 +47,9 @@ def select_level(console: Console) -> Path | None:
         table.add_row("1", "Basic")
         table.add_row("2", "Advanced")
 
-        console.print(table)
-        console.print()
-        console.print("[cyan]Press 1 or 2 to select a course, or 'q' to quit:[/]")
+        _console.print(table)
+        _console.print()
+        _console.print("[cyan]Press 1 or 2 to select a course, or 'q' to quit:[/]")
 
         key = get_key()
 
@@ -59,9 +59,9 @@ def select_level(console: Console) -> Path | None:
         if key in files:
             filepath = files[key]
             if not filepath.exists():
-                console.clear()
-                console.print(f"[red]File not found: {filepath}[/]")
-                console.print(
+                _console.clear()
+                _console.print(f"[red]File not found: {filepath}[/]")
+                _console.print(
                     "[yellow]Run 'update' command first to download question banks.[/]"
                 )
                 sys.exit(1)
