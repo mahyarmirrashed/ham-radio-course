@@ -11,10 +11,12 @@ APP_TITLE = "Canadian Amateur Radio Quiz"
 def get_key() -> str:
     """Read a single raw keypress from stdin without requiring Enter."""
     if sys.platform == "win32":
+        # Windows systems
         import msvcrt
 
         return msvcrt.getwch()
     else:
+        # Mac and Linux systems
         import termios
         import tty
 
