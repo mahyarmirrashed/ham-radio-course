@@ -20,6 +20,7 @@
         pythonEnv = pkgs.python312.withPackages (
           ps: with ps; [
             pandas
+            pandas-stubs
             requests
             rich
             typer
