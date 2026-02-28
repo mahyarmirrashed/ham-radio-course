@@ -161,19 +161,14 @@ def _load_category(idx: int, categories: list[Category]) -> list[Question]:
     return categories[idx - 1].questions.copy()
 
 
-# ------------------------------------------------------------------
-# Quiz session
-# ------------------------------------------------------------------
-
-
 class Quiz:
     def __init__(self, questions: list[Question], ask_all_questions: bool):
-        self.console = Console()
+        self.console: Console = Console()
         self.questions: list[Question] = questions
-        self.ask_all_questions = ask_all_questions
+        self.ask_all_questions: bool = ask_all_questions
         self.incorrect: list[IncorrectAnswer] = []
-        self.current_index = 0
-        self.score = 0
+        self.current_index: int = 0
+        self.score: int = 0
         self.current_choices: list[str] = []
 
     def _prepare_quiz(self) -> None:
