@@ -21,12 +21,12 @@ def get_key() -> str:
         import tty
 
         fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
+        state = termios.tcgetattr(fd)
         try:
-            tty.setraw(fd)
+            _ = tty.setraw(fd)
             key = sys.stdin.read(1)
         finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+            termios.tcsetattr(fd, termios.TCSADRAIN, state)
         return key
 
 
