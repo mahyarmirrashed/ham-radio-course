@@ -49,7 +49,7 @@ def quiz():
                 break  # back to course selection
 
             category_idx, ask_all_questions = category
-            questions = _load_category(category_idx, categories)
+            questions = _load_category_questions(category_idx, categories)
             Quiz(questions, ask_all_questions).run()
 
 
@@ -150,7 +150,7 @@ def _prompt_for_category(categories: list[Category]) -> tuple[int, bool] | None:
                 return (idx, True)
 
 
-def _load_category(idx: int, categories: list[Category]) -> list[Question]:
+def _load_category_questions(idx: int, categories: list[Category]) -> list[Question]:
     """Return the list of questions for the given category index."""
     if idx == 0:
         questions: list[Question] = []
