@@ -40,7 +40,7 @@ DOWNLOAD_DIR = Path(".download")
 DATA_DIR = Path("data")
 
 
-def process_question_bank(level: str):
+def _process_question_bank(level: str):
     zip_url = ZIP_URLS[level]
     level_dir = DOWNLOAD_DIR / level
     level_dir.mkdir(parents=True, exist_ok=True)
@@ -127,8 +127,8 @@ def update():
     DOWNLOAD_DIR.mkdir()
     DATA_DIR.mkdir(exist_ok=True)
 
-    process_question_bank("basic")
-    process_question_bank("advanced")
+    _process_question_bank("basic")
+    _process_question_bank("advanced")
 
     if DOWNLOAD_DIR.exists():
         shutil.rmtree(DOWNLOAD_DIR)
