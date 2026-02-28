@@ -7,8 +7,9 @@ from time import sleep
 from rich import box
 from rich.console import Console
 from rich.panel import Panel
+from rich.table import Table
 
-from util import get_key, make_table, print_header
+from util import get_key, print_header
 
 _console = Console()
 
@@ -40,10 +41,9 @@ def select_level(console: Console) -> Path | None:
         console.clear()
         print_header(console)
 
-        table = make_table(
-            ("#", {"justify": "right", "style": "cyan"}),
-            ("Course", {"style": "green"}),
-        )
+        table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan")
+        table.add_column("#", justify="right", style="cyan")
+        table.add_column("Course", style="green")
         table.add_row("1", "Basic")
         table.add_row("2", "Advanced")
 
@@ -106,11 +106,10 @@ class Quiz:
         self.console.clear()
         print_header(self.console)
 
-        table = make_table(
-            ("#", {"justify": "right", "style": "cyan"}),
-            ("Category", {"style": "green"}),
-            ("Questions", {"justify": "right", "style": "yellow"}),
-        )
+        table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan")
+        table.add_column("#", justify="right", style="cyan")
+        table.add_column("Category", style="green")
+        table.add_column("Questions", justify="right", style="yellow")
 
         total_qs = sum(len(qs) for qs in self.categories.values())
         table.add_row("0", "All Categories", str(total_qs))

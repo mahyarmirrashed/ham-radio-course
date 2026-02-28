@@ -3,7 +3,6 @@ import sys
 from rich import box
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
 
 APP_TITLE = "Canadian Amateur Radio Quiz"
 
@@ -40,21 +39,3 @@ def print_header(console: Console, title: str = APP_TITLE) -> None:
         )
     )
     console.print()
-
-
-def make_table(*col_specs: tuple) -> Table:
-    """
-    Create the standard app table (rounded border, bold-cyan header).
-
-    Each element of col_specs is a tuple of positional + keyword args passed
-    directly to Table.add_column, e.g.:
-        make_table(
-            ("#", {"justify": "right", "style": "cyan"}),
-            ("Course", {"style": "green"}),
-        )
-    """
-    table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan")
-    for spec in col_specs:
-        header, kwargs = spec
-        table.add_column(header, **kwargs)
-    return table
