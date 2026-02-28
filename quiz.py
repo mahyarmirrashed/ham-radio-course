@@ -39,17 +39,17 @@ def quiz():
             break
 
         categories = _load_categories(course_filepath)
-        sorted_cats = sorted(categories.items())
+        categories_sorted = sorted(categories.items())
 
         while True:
-            _show_category_menu(sorted_cats, categories)
-            result = _prompt_for_category(sorted_cats)
+            _show_category_menu(categories_sorted, categories)
+            result = _prompt_for_category(categories_sorted)
 
             if result is None:
                 break  # back to course selection
 
             idx, limit_questions = result
-            questions = _load_category(idx, sorted_cats, categories)
+            questions = _load_category(idx, categories_sorted, categories)
             Quiz(questions, limit_questions).run()
 
 
@@ -121,7 +121,7 @@ def _load_categories(filepath: Path) -> dict:
     return categories
 
 
-def _show_category_menu(sorted_cats: list, categories: dict) -> None:
+def _show_category_menu(categories_sorted: list, categories: dict) -> None:
     """Display the category selection menu."""
     _console.clear()
     print_header(_console)
@@ -134,7 +134,7 @@ def _show_category_menu(sorted_cats: list, categories: dict) -> None:
     total_qs = sum(len(qs) for qs in categories.values())
     table.add_row("0", "All Categories", str(total_qs))
 
-    for idx, (cat_name, qs) in enumerate(sorted_cats, 1):
+    for idx, (cat_name, qs) in enumerate(categories_sorted, 1):
         table.add_row(str(idx), cat_name, str(len(qs)))
 
     _console.print(table)
@@ -144,7 +144,7 @@ def _show_category_menu(sorted_cats: list, categories: dict) -> None:
     )
 
 
-def _prompt_for_category(sorted_cats: list) -> tuple[int, bool] | None:
+def _prompt_for_category(categories_sorted: list) -> tuple[int, bool] | None:
     """Wait for a keypress and return (category_idx, limit_questions), or None if 'q'."""
     while True:
         key = get_key()
@@ -154,16 +154,16 @@ def _prompt_for_category(sorted_cats: list) -> tuple[int, bool] | None:
 
         if key.isdigit():
             idx = int(key)
-            if idx == 0 or 1 <= idx <= len(sorted_cats):
+            if idx == 0 or 1 <= idx <= len(categories_sorted):
                 return (idx, True)
 
         elif key in _SHIFTED_DIGIT_MAP:
             idx = _SHIFTED_DIGIT_MAP[key]
-            if idx == 0 or 1 <= idx <= len(sorted_cats):
+            if idx == 0 or 1 <= idx <= len(categories_sorted):
                 return (idx, False)
 
 
-def _load_category(idx: int, sorted_cats: list, categories: dict) -> list:
+def _load_category(idx: int, categories_sorted: list, categories: dict) -> list:
     """Return the list of questions for the given category index."""
     if idx == 0:
         questions = []
@@ -171,7 +171,7 @@ def _load_category(idx: int, sorted_cats: list, categories: dict) -> list:
             questions.extend(qs)
         return questions
 
-    cat_name = sorted_cats[idx - 1][0]
+    cat_name = categories_sorted[idx - 1][0]
     return categories[cat_name].copy()
 
 
