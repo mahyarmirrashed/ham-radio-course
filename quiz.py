@@ -37,6 +37,7 @@ def select_level(console: Console) -> Path | None:
     }
 
     while True:
+        console.clear()
         print_header(console)
 
         table = make_table(
@@ -102,6 +103,7 @@ class Quiz:
 
     def _show_menu(self, sorted_cats: list) -> None:
         """Display category selection menu."""
+        self.console.clear()
         print_header(self.console)
 
         table = make_table(

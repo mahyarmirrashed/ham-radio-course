@@ -29,8 +29,7 @@ def get_key() -> str:
 
 
 def print_header(console: Console, title: str = APP_TITLE) -> None:
-    """Clear the screen and print the standard gold-on-blue double-border title panel."""
-    console.clear()
+    """Print the standard gold-on-blue double-border title panel."""
     console.print(
         Panel(
             f"[bold gold1]{title}[/]",

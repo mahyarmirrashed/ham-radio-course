@@ -6,9 +6,10 @@ from pathlib import Path
 import pandas as pd
 import requests
 import typer
-from rich import box
 from rich.console import Console
 from rich.panel import Panel
+
+from util import print_header
 
 console = Console()
 
@@ -119,14 +120,7 @@ def process_question_bank(level: str):
 
 def update():
     """Update question banks (basic, advanced)."""
-    console.print(
-        Panel(
-            "[bold gold1]Canadian Amateur Radio Question Bank Updater[/]",
-            box=box.DOUBLE,
-            style="blue",
-        )
-    )
-    console.print()
+    print_header(console, title="Canadian Amateur Radio Question Bank Updater")
 
     if DOWNLOAD_DIR.exists():
         shutil.rmtree(DOWNLOAD_DIR)
