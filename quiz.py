@@ -10,6 +10,21 @@ from rich.panel import Panel
 
 from util import get_key, make_table, print_header
 
+_console = Console()
+
+
+def quiz():
+    """Run the interactive quiz."""
+    while True:
+        filepath = select_level(_console)
+
+        if filepath is None:
+            _console.clear()
+            _console.print("[green]Thanks for using the quiz app![/]")
+            break
+
+        Quiz(filepath).run()
+
 
 def select_level(console: Console) -> Path | None:
     """Display course selection screen and return the chosen filepath via a single keypress.
