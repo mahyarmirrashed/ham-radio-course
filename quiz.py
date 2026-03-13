@@ -54,7 +54,8 @@ def quiz():
 
 
 def _prompt_for_course() -> Path | None:
-    """Display course selection screen and return the chosen filepath via a single keypress.
+    """Display course selection screen and return the chosen filepath
+    via a single keypress.
 
     Returns None if the user presses 'q' to quit.
     """
@@ -95,7 +96,8 @@ def _prompt_for_course() -> Path | None:
 
 
 def _load_categories(filepath: Path) -> list[Category]:
-    """Load questions from a JSON file and return categories in code order."""
+    """Load questions from a JSON file and return categories in code
+    order."""
     categories: list[Category] = []
 
     with open(filepath, "r", encoding="utf-8") as f:
@@ -132,7 +134,8 @@ def _show_category_menu(categories: list[Category]) -> None:
 
 
 def _prompt_for_category(categories: list[Category]) -> tuple[int, bool] | None:
-    """Wait for a keypress and return (category_idx, ask_all_questions), or None if 'q'."""
+    """Wait for a keypress and return (category_idx, ask_all_questions),
+    or None if 'q'."""
     while True:
         key = get_key()
 
@@ -198,7 +201,8 @@ class Quiz:
             return False
 
     def _prepare_quiz(self) -> None:
-        """Shuffle questions and apply the 20-question cap when appropriate."""
+        """Shuffle questions and apply the 20-question cap when
+        appropriate."""
         random.shuffle(self.questions)
         if not self.ask_all_questions:
             self.questions = self.questions[:20]
@@ -207,7 +211,8 @@ class Quiz:
         self.incorrect = []
 
     def _show_question(self) -> None:
-        """Display the current question and its shuffled answer choices."""
+        """Display the current question and its shuffled answer
+        choices."""
         self.console.clear()
 
         q = self.questions[self.current_index]
@@ -274,7 +279,8 @@ class Quiz:
         _ = get_key()
 
     def _show_results(self) -> None:
-        """Display the final score and optionally review incorrect answers."""
+        """Display the final score and optionally review incorrect
+        answers."""
         self.console.clear()
 
         percentage = (self.score / len(self.questions)) * 100

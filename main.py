@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""
-CLI for Canadian Amateur Radio question banks (both basic and advanced).
-"""
+"""CLI for Canadian Amateur Radio question banks (both basic and
+advanced)."""
 
 import typer
 
