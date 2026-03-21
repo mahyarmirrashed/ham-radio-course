@@ -9,6 +9,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from constants import BASIC_EXAM_QUOTAS
 from models import Category, IncorrectAnswer, Question
 from util import get_key, print_header
 
@@ -41,6 +42,8 @@ def quiz():
 
         categories = _load_categories(course_filepath)
 
+        quotas = BASIC_EXAM_QUOTAS if "basic" in str(course_filepath) else None
+
         while True:
             _show_category_menu(categories)
             category = _prompt_for_category(categories)
@@ -49,8 +52,18 @@ def quiz():
                 break  # back to course selection
 
             category_idx, ask_all_questions = category
-            questions = _load_category_questions(category_idx, categories)
-            Quiz(questions, ask_all_questions).run()
+
+            if ask_all_questions:
+                questions = _load_category_questions(category_idx, categories)
+                question_limit = None
+            elif category_idx == 0:
+                questions = _load_category_questions(category_idx, categories, quotas)
+                question_limit = None if quotas else 50
+            else:
+                questions = _load_category_questions(category_idx, categories)
+                question_limit = 20
+
+            Quiz(questions, question_limit).run()
 
 
 def _prompt_for_course() -> Path | None:
@@ -153,22 +166,34 @@ def _prompt_for_category(categories: list[Category]) -> tuple[int, bool] | None:
                 return (idx, True)
 
 
-def _load_category_questions(idx: int, categories: list[Category]) -> list[Question]:
+def _load_category_questions(
+    idx: int,
+    categories: list[Category],
+    quotas: dict[str, int] | None = None,
+) -> list[Question]:
     """Return the list of questions for the given category index."""
     if idx == 0:
         questions: list[Question] = []
-        for category in categories:
-            questions.extend(category.questions)
+
+        if quotas is not None:
+            for category in categories:
+                quota = quotas.get(category.title, 0)
+                pool = category.questions.copy()
+                random.shuffle(pool)
+                questions.extend(pool[:quota])
+        else:
+            for category in categories:
+                questions.extend(category.questions)
         return questions
 
     return categories[idx - 1].questions.copy()
 
 
 class Quiz:
-    def __init__(self, questions: list[Question], ask_all_questions: bool):
+    def __init__(self, questions: list[Question], question_limit: int | None):
         self.console: Console = Console()
         self.questions: list[Question] = questions
-        self.ask_all_questions: bool = ask_all_questions
+        self.question_limit: int | None = question_limit
         self.incorrect: list[IncorrectAnswer] = []
         self.current_index: int = 0
         self.score: int = 0
@@ -204,8 +229,8 @@ class Quiz:
         """Shuffle questions and apply the 20-question cap when
         appropriate."""
         random.shuffle(self.questions)
-        if not self.ask_all_questions:
-            self.questions = self.questions[:20]
+        if self.question_limit is not None:
+            self.questions = self.questions[: self.question_limit]
         self.current_index = 0
         self.score = 0
         self.incorrect = []
