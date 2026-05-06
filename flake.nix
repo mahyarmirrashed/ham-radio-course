@@ -1,5 +1,5 @@
 {
-  description = "Flake for github:mahyarmirrashed/ham-radio-course";
+  description = "Flake for github:mahyarmirrashed/hammah-quiz";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
@@ -33,7 +33,7 @@
             pythonEnv
           ];
           shellHook = ''
-            alias start="python ${toString ./.}/main.py quiz"
+            alias hammah-quiz="python ${toString ./.}/main.py"
           '';
         };
       }

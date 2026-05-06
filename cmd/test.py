@@ -41,8 +41,8 @@ _SHIFTED_DIGIT_MAP = {
 }
 
 
-def quiz():
-    """Run the interactive quiz."""
+def test():
+    """Run the interactive test."""
     while True:
         course_filepath = _prompt_for_course()
 

@@ -42,9 +42,9 @@ jobs:
           pip install pyinstaller
       - name: Build EXE
         run: >
-          pyinstaller --onefile --add-data "data;data" --name ham-radio-course main.py
+          pyinstaller --onefile --add-data "data;data" --name hammah-quiz main.py
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/ham-radio-course.exe
+          files: dist/hammah-quiz.exe

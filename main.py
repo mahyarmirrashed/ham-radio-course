@@ -4,12 +4,20 @@ advanced)."""
 
 import typer
 
-from quiz import quiz
-from update import update
+from cmd import test, update
 
-app = typer.Typer()
+app = typer.Typer(invoke_without_command=True)
+
+
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context):
+    """Canadian Amateur Radio exam practice tool."""
+    if ctx.invoked_subcommand is None:
+        test()
+
+
+_ = app.command()(test)
 _ = app.command()(update)
-_ = app.command()(quiz)
 
 if __name__ == "__main__":
     app()

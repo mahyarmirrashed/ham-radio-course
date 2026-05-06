@@ -1,6 +1,6 @@
-# HAM Radio Course Practice Test (CLI)
+# Hammah Quiz
 
-A simple terminal-based quiz app for studying Canadian Amateur Radio exam questions.
+A terminal-based practice test for Canadian Amateur Radio exam questions.
 
 ![Quiz Question Screenshot](./res/question.png)
 
@@ -11,17 +11,18 @@ A simple terminal-based quiz app for studying Canadian Amateur Radio exam questi
 First, download the latest official question banks:
 
 ```sh
-python main.py update
+hammah-quiz update
 ```
 
-This downloads and processes both Basic and Advanced question sets into `data/` directory.
+This downloads and processes both Basic and Advanced question sets into the
+`data/` directory.
 
-### 2. Run Quiz
+### 2. Run Test
 
-Start the interactive quiz:
+Start the interactive test:
 
 ```sh
-python main.py quiz
+hammah-quiz
 ```
 
 You'll be prompted to select Basic (1) or Advanced (2) level, then you can:
