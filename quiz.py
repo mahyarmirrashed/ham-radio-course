@@ -15,6 +15,17 @@ from util import get_key, print_header
 
 _console = Console()
 
+
+def _get_base_path() -> Path:
+    """Return the base path for data files, handling PyInstaller
+    bundles."""
+    meipass: str | None = getattr(sys, "_MEIPASS", None)
+
+    if meipass:
+        return Path(meipass)
+    return Path()
+
+
 # Shifted digit symbols → their base digit index (SHIFT+1=!, …, SHIFT+0=))
 _SHIFTED_DIGIT_MAP = {
     "!": 1,
@@ -72,9 +83,10 @@ def _prompt_for_course() -> Path | None:
 
     Returns None if the user presses 'q' to quit.
     """
+    base = _get_base_path()
     files = {
-        "1": Path("data/amateur_basic_question.json"),
-        "2": Path("data/amateur_advanced_question.json"),
+        "1": base / "data" / "amateur_basic_question.json",
+        "2": base / "data" / "amateur_advanced_question.json",
     }
 
     while True:
