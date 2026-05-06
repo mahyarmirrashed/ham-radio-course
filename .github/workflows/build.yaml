@@ -1,0 +1,57 @@
+name: Build Windows EXE
+on:
+  push:
+    tags:
+      - "v*"
+jobs:
+  generate-requirements:
+    runs-on: ubuntu-latest
+    container:
+      image: nixos/nix:latest
+    env:
+      NIX_CONFIG: "experimental-features = nix-command flakes"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache Nix store
+        uses: actions/cache@v4
+        with:
+          path: /nix/store
+          key: nix-${{ hashFiles('flake.lock') }}
+          restore-keys: nix-
+      - name: Generate requirements.txt
+        run: |
+          nix develop --command pip freeze \
+            | grep -iv 'pandas-stubs' \
+            > requirements.txt
+      - name: Upload requirements.txt
+        uses: actions/upload-artifact@v4
+        with:
+          name: requirements
+          path: requirements.txt
+  build-windows:
+    needs: generate-requirements
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download requirements.txt
+        uses: actions/download-artifact@v4
+        with:
+          name: requirements
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+      - name: Build EXE
+        run: >
+          pyinstaller --onefile --add-data "data;data" --name ham-radio-course main.py
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/ham-radio-course.exe
